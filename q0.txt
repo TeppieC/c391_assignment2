@@ -15,6 +15,6 @@ CREATE TABLE poi_tag(
 	FOREIGN KEY (id) REFERENCES po(id)
 );
 
-.separator "\t";
-.import poi.tsv poi;
-.import poi_tag.tsv poi_tag;
+.separator "\t"
+.import poi_tag.tsv poi_tag
+.import poi.tsv poi
