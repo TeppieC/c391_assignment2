@@ -23,14 +23,14 @@ def convertLonToCartesian(lon):
 	return str(LONSCALE*(float(lon)-11.35800)/unitLonMeter)
 
 if __name__ == "__main__":
-	conn = sqlite3.connect('test3.db')
+	conn = sqlite3.connect('test.db')
 	print "Opened database successfully"
 
 	conn.execute('''CREATE TABLE poi_cartesian
 		   (id INT PRIMARY KEY,
 		   uid INT,
-		   lat NUMERIC(9,2),
-		   lon NUMERIC(9,2));''')
+		   end_y NUMERIC(9,2),
+		   start_x NUMERIC(9,2));''')
 	print "Table created successfully"
 
 	container = []
@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
 
 	for row in container:
-		conn.execute("INSERT INTO poi_cartesian (id,uid,lat,lon) VALUES (%s, %s, %s, %s )"%(row[0], row[1], row[2], row[3]));
+		conn.execute("INSERT INTO poi_cartesian (id,uid,end_y,start_x) VALUES (%s, %s, %s, %s )"%(row[0], row[1], row[2], row[3]));
 
 	conn.commit()
 

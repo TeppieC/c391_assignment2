@@ -1,1 +1,1 @@
-CREATE INDEX common_index ON poi_cartesian(lat, lon);
+CREATE INDEX common_index ON poi_cartesian(end_y, start_x);

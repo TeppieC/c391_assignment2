@@ -13,6 +13,7 @@ struct mbr {
 int main(int argc, char **argv){
 	sqlite3 *db; //the database
 	sqlite3_stmt *stmt; //the update statement
+	sqlite3_stmt *stmt2;
   	char *zErrMsg = 0;
 
   	int rc;
@@ -85,9 +86,67 @@ int main(int argc, char **argv){
     		//http://stackoverflow.com/questions/3557221/how-do-i-measure-time-in-c
     		clock_t start = clock(); // start the clock
 
-    		printf("The iteration number: %d\n", j);
+    		//printf("The iteration number: %d\n", j);
     		while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-	          	printf("%s objects contained in this box", sqlite3_column_text(stmt, 0));
+	          	//printf("%s objects contained in this box", sqlite3_column_text(stmt, 0));
+    		}
+    		
+			clock_t end = clock(); // end the clock
+			box_total_time += (double)(end - start) / (CLOCKS_PER_SEC/1000); //increase the total time for this box
+    	}
+    	//printf("finished executing box #:%d\n", i);
+
+    	rtree_total_time +=box_total_time/20; // increase the total time for 100 boxes by this box's average time
+	}
+
+    sqlite3_finalize(stmt); //always finalize a statement
+
+
+
+ /****************************** common indexes method *****************************************/
+    // template of the query for all objects within the bounding box
+    char *sql_stmt2 = "SELECT count(p.id)  \
+                      FROM poi_cartesian p \
+                      WHERE p.start_x>=? AND p.start_x+0.3665517966646282<=? \
+                      AND p.end_y-0.4758483412331294>=? AND p.end_y<=? ";
+
+    rc = sqlite3_prepare_v2(db, sql_stmt2, -1, &stmt2, 0);
+
+    if (rc != SQLITE_OK) {  
+        fprintf(stderr, "Preparation failed: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return 1;
+    }    
+
+    double index_total_time = 0;
+    // iterate over all 100 bounding boxes
+	for (int i = 0; i < 100; ++i){
+		
+		double box_total_time = 0;
+		struct mbr mbrBox = mbr_list[i]; // choose a box
+
+		if (i>0) {
+			//clear the bindings, for the new box
+			sqlite3_reset(stmt2);
+			sqlite3_clear_bindings(stmt2);
+		}
+
+		// bind the values
+    	sqlite3_bind_int(stmt2, 1, mbrBox.start_x);
+    	sqlite3_bind_int(stmt2, 2, mbrBox.start_x+mbrBox.length);
+    	sqlite3_bind_int(stmt2, 3, mbrBox.end_y-mbrBox.length);
+    	sqlite3_bind_int(stmt2, 4, mbrBox.end_y);
+    	printf(" (%d, %d, %d, %d)\n", mbrBox.start_x, mbrBox.start_x+mbrBox.length,mbrBox.end_y-mbrBox.length, mbrBox.end_y);
+
+    	// execute for 20 times of runs
+    	for (int j = 0; j < 20; ++j)
+    	{
+    		//http://stackoverflow.com/questions/3557221/how-do-i-measure-time-in-c
+    		clock_t start = clock(); // start the clock
+
+    		printf("The iteration number: %d\n", j);
+    		while((rc = sqlite3_step(stmt2)) == SQLITE_ROW) {
+	          	printf("%s objects contained in this box", sqlite3_column_text(stmt2, 0));
     		}
     		
 			clock_t end = clock(); // end the clock
@@ -95,15 +154,16 @@ int main(int argc, char **argv){
     	}
     	printf("finished executing box #:%d\n", i);
 
-    	rtree_total_time +=box_total_time/20; // increase the total time for 100 boxes by this box's average time
+    	index_total_time +=box_total_time/20; // increase the total time for 100 boxes by this box's average time
 	}
+
+
     printf("Parameter l: %d \n", length);
    	printf("Average runtime with r-tree: %f ms\n", rtree_total_time/100);
+   	printf("Average runtime without r-tree: %f ms\n", index_total_time/100);
 
-    sqlite3_finalize(stmt); //always finalize a statement
-  
+    sqlite3_finalize(stmt2); //always finalize a statement
 
- /****************************** common indexes method *****************************************/
     sqlite3_close(db);
 }
 
