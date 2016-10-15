@@ -4,12 +4,11 @@
 #include <string.h>
 #include <time.h>
 
-// return a number within 0-1000 as the top-left corner of the bounding box
-int random_num(){
-  	srand ( time(NULL) );
-  	int random_number = rand()%1000;
-  	return random_number;
-}
+struct mbr {
+    int start_x;
+    int end_y;
+    int length;
+};
 
 int main(int argc, char **argv){
 	sqlite3 *db; //the database
@@ -19,16 +18,12 @@ int main(int argc, char **argv){
   	int rc;
 
     // check the arguments, should read in l
-  	if( argc!=7 ){
-    	fprintf(stderr, "Usage: %s <database file> <x1> <y1> <x2> <y2> <c>\n", argv[0]);
+  	if( argc!=3 ){
+    	fprintf(stderr, "Usage: %s <database file> <length>\n", argv[0]);
     	return(1);
   	}
 
-  	// generate the 100 random bounding squares
-
-  	// loop 20 times, compute the average time needed to 
-
-    // open the database
+  	// open the database
   	rc = sqlite3_open(argv[1], &db);
   	if( rc ){
     	fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
@@ -36,57 +31,79 @@ int main(int argc, char **argv){
     	return(1);
   	}
 
-    // deal with the parameters
-    char *x1 = argv[2];
-    char *y1 = argv[3];
-    char *x2 = argv[4];
-    char *y2 = argv[5];
-    char *c = argv[6];
-    printf("Querying the bounding rectangle (%s,%s), (%s,%s), of class: %s\n", x1,y1,x2,y2,c);
+  	struct mbr mbr_list[100];
+
+  	int length = atoi(argv[2]);
+
+  	// generate the 100 bounding boxes
+  	for (int i = 0; i < 100; ++i){
+  		// generate a random bounding box
+  		mbr_list[i].start_x = rand()%1000; // x of the top-left
+  		mbr_list[i].end_y = rand()%1000; // y of the top-left
+  		mbr_list[i].length = length;
+  	}
 
 
-    // query for all objects within the bounding box
-    char *sql_stmt = "SELECT p.* \
-                      FROM rtree_index r, poi_tag p \
+ /****************************** rtree method *****************************************/
+    // template of the query for all objects within the bounding box
+    char *sql_stmt = "SELECT count(r.id)  \
+                      FROM rtree_index r \
                       WHERE r.start_x>=? AND r.end_x<=? \
-                      AND r.start_y>=?  AND r.end_y<=? \
-                      AND p.key='class' AND p.value=?;";
-
-    // Allocates storage
-    //char *sql = (char*)malloc(300 * sizeof(char));
-    // Prints "Hello world!" on hello_world
-    //sprintf(sql, sql_stmt, x1, x2, y1, y2, c);
-    //printf("%s\n", sql);
+                      AND r.start_y>=?  AND r.end_y<=? ";
 
     rc = sqlite3_prepare_v2(db, sql_stmt, -1, &stmt, 0);
 
     if (rc != SQLITE_OK) {  
-          fprintf(stderr, "Preparation failed: %s\n", sqlite3_errmsg(db));
-          sqlite3_close(db);
-          return 1;
+        fprintf(stderr, "Preparation failed: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return 1;
     }    
 
-    // bind the value 
-    sqlite3_bind_text(stmt, 1, x1, strlen(x1), 0);
-    sqlite3_bind_text(stmt, 2, x2, strlen(x2), 0);
-    sqlite3_bind_text(stmt, 3, y1, strlen(y1), 0);
-    sqlite3_bind_text(stmt, 4, y2, strlen(y2), 0);
-    sqlite3_bind_text(stmt, 5, c, strlen(c), 0);
-    
-    int count = 0;
-    while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-          int col;
-          count+=1;
-          for(col=0; col<sqlite3_column_count(stmt)-1; col++) {
-            printf("%s|", sqlite3_column_text(stmt, col));
-          }
-          printf("%s", sqlite3_column_text(stmt, col));
-          printf("\n");
-    }
-    printf("%d rows found\n", count);
+    double rtree_total_time = 0;
+    // iterate over all 100 bounding boxes
+	for (int i = 0; i < 100; ++i){
+		
+		double box_total_time = 0;
+		struct mbr mbrBox = mbr_list[i]; // choose a box
+
+		if (i>0) {
+			//clear the bindings, for the new box
+			sqlite3_reset(stmt);
+			sqlite3_clear_bindings(stmt);
+		}
+
+		// bind the values
+    	sqlite3_bind_int(stmt, 1, mbrBox.start_x);
+    	sqlite3_bind_int(stmt, 2, mbrBox.start_x+mbrBox.length);
+    	sqlite3_bind_int(stmt, 3, mbrBox.end_y-mbrBox.length);
+    	sqlite3_bind_int(stmt, 4, mbrBox.end_y);
+    	printf(" (%d, %d, %d, %d)\n", mbrBox.start_x, mbrBox.start_x+mbrBox.length,mbrBox.end_y-mbrBox.length, mbrBox.end_y);
+
+    	// execute for 20 times of runs
+    	for (int j = 0; j < 20; ++j)
+    	{
+    		//http://stackoverflow.com/questions/3557221/how-do-i-measure-time-in-c
+    		clock_t start = clock(); // start the clock
+
+    		printf("The iteration number: %d\n", j);
+    		while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+	          	printf("%s objects contained in this box", sqlite3_column_text(stmt, 0));
+    		}
+    		
+			clock_t end = clock(); // end the clock
+			box_total_time += (double)(end - start) / (CLOCKS_PER_SEC/1000); //increase the total time for this box
+    	}
+    	printf("finished executing box #:%d\n", i);
+
+    	rtree_total_time +=box_total_time/20; // increase the total time for 100 boxes by this box's average time
+	}
+    printf("Parameter l: %d \n", length);
+   	printf("Average runtime with r-tree: %f ms\n", rtree_total_time/100);
+
     sqlite3_finalize(stmt); //always finalize a statement
   
-    //free(sql);
+
+ /****************************** common indexes method *****************************************/
     sqlite3_close(db);
 }
 
