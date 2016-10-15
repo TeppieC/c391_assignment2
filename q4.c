@@ -38,6 +38,7 @@ int main(int argc, char **argv){
                       FROM rtree_index r, poi_tag p \
                       WHERE r.start_x>=? AND r.end_x<=? \
                       AND r.start_y>=?  AND r.end_y<=? \
+                      AND p.id = r.id \
                       AND p.key='class' AND p.value=?;";
 
     // Allocates storage
