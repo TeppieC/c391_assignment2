@@ -1,0 +1,20 @@
+1|
+
+//which one to put as the answer?
+
+1|1
+2|1
+3|1
+4|1
+5|1
+6|1
+7|1
+8|1
+9|1
+10|1
+11|1
+12|1
+13|1
+14|1
+
+Because in Q3, we didn't indicate the number of M and m when generating the indexes. Therefore, it automatically collect all objects under one single mbr. 

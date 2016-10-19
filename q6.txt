@@ -5,3 +5,17 @@ Average runtime without r-tree: 8.744300 ms
 Parameter l: 50 
 Average runtime with r-tree: 0.075625 ms
 Average runtime without r-tree: 8.992915 ms
+
+Parameter l: 75 
+Average runtime with r-tree: 0.124079 ms
+Average runtime without r-tree: 8.688389 ms
+
+Parameter l: 100 
+Average runtime with r-tree: 0.177105 ms
+Average runtime without r-tree: 8.783900 ms
+
+Parameter l: 125 
+Average runtime with r-tree: 0.244767 ms
+Average runtime without r-tree: 8.908202 ms
+
+The rtree is much faster than common index. There is no obvious difference among the different choices of length in common index approach. While there is difference in runtime when choosing difference length in rtree approach. The smaller length, the faster the query runs.
