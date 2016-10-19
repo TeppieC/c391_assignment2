@@ -1,0 +1,7 @@
+Parameter l: 25 
+Average runtime with r-tree: 0.034775 ms
+Average runtime without r-tree: 8.744300 ms
+
+Parameter l: 50 
+Average runtime with r-tree: 0.075625 ms
+Average runtime without r-tree: 8.992915 ms

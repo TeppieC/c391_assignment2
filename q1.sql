@@ -1,7 +1,7 @@
 CREATE VIRTUAL TABLE rtree_index USING rtree(
    id,              -- Integer primary key
-   start_y, end_y,      -- Minimum and maximum X coordinate
-   start_x, end_x       -- Minimum and maximum Y coordinate
+   start_y, end_y,      -- Minimum and maximum y coordinate
+   start_x, end_x       -- Minimum and maximum x coordinate
 );
 
 -- 10m of latitude in cartesian coordination system: 10/(111191*(48.2490-48.0600)/1000) = 0.4758483412331294

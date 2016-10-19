@@ -4,6 +4,9 @@
 #include <string.h>
 #include <time.h>
 
+/***
+  gcc -g q5.c sqlite3.c -lpthread -ldl -DSQLITE_ENABLE_RTREE=1
+***/
 struct mbr {
     int start_x;
     int end_y;
@@ -14,7 +17,7 @@ int main(int argc, char **argv){
 	sqlite3 *db; //the database
 	sqlite3_stmt *stmt; //the update statement
 	sqlite3_stmt *stmt2;
-  	char *zErrMsg = 0;
+  char *zErrMsg = 0;
 
   	int rc;
 
@@ -32,6 +35,8 @@ int main(int argc, char **argv){
     	return(1);
   	}
 
+
+  /**************** generating 100boxes ********************************************/
   	struct mbr mbr_list[100];
 
   	int length = atoi(argv[2]);
@@ -78,7 +83,7 @@ int main(int argc, char **argv){
     	sqlite3_bind_int(stmt, 2, mbrBox.start_x+mbrBox.length);
     	sqlite3_bind_int(stmt, 3, mbrBox.end_y-mbrBox.length);
     	sqlite3_bind_int(stmt, 4, mbrBox.end_y);
-    	printf(" (%d, %d, %d, %d)\n", mbrBox.start_x, mbrBox.start_x+mbrBox.length,mbrBox.end_y-mbrBox.length, mbrBox.end_y);
+    	//printf(" (%d, %d, %d, %d)\n", mbrBox.start_x, mbrBox.start_x+mbrBox.length,mbrBox.end_y-mbrBox.length, mbrBox.end_y);
 
     	// execute for 20 times of runs
     	for (int j = 0; j < 20; ++j)
@@ -136,7 +141,7 @@ int main(int argc, char **argv){
     	sqlite3_bind_int(stmt2, 2, mbrBox.start_x+mbrBox.length);
     	sqlite3_bind_int(stmt2, 3, mbrBox.end_y-mbrBox.length);
     	sqlite3_bind_int(stmt2, 4, mbrBox.end_y);
-    	printf(" (%d, %d, %d, %d)\n", mbrBox.start_x, mbrBox.start_x+mbrBox.length,mbrBox.end_y-mbrBox.length, mbrBox.end_y);
+    	//printf(" (%d, %d, %d, %d)\n", mbrBox.start_x, mbrBox.start_x+mbrBox.length,mbrBox.end_y-mbrBox.length, mbrBox.end_y);
 
     	// execute for 20 times of runs
     	for (int j = 0; j < 20; ++j)
@@ -144,15 +149,15 @@ int main(int argc, char **argv){
     		//http://stackoverflow.com/questions/3557221/how-do-i-measure-time-in-c
     		clock_t start = clock(); // start the clock
 
-    		printf("The iteration number: %d\n", j);
+    		//printf("The iteration number: %d\n", j);
     		while((rc = sqlite3_step(stmt2)) == SQLITE_ROW) {
-	          	printf("%s objects contained in this box", sqlite3_column_text(stmt2, 0));
+	          	//printf("%s objects contained in this box", sqlite3_column_text(stmt2, 0));
     		}
     		
 			clock_t end = clock(); // end the clock
 			box_total_time += (double)(end - start) / (CLOCKS_PER_SEC/1000); //increase the total time for this box
     	}
-    	printf("finished executing box #:%d\n", i);
+    	//printf("finished executing box #:%d\n", i);
 
     	index_total_time +=box_total_time/20; // increase the total time for 100 boxes by this box's average time
 	}
