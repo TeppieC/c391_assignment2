@@ -63,13 +63,15 @@ int main(int argc, char **argv){
        fprintf(stdout, "table updated successful\n");
     }
 
-    char *sql_stmt_check = "SELECT count(i.nodeno)-count(n.nodeno) \
-                            FROM innerNodes i, rtree_index_node n"
+    char *sql_stmt_check = "SELECT count(i.nodeno), count(n.nodeno) \
+                            FROM innerNodes i, rtree_index_node n";
 
     rc = sqlite3_prepare_v2(db, sql_stmt_check, -1, &stmt, 0);
-    int change = -1
+    int change = -1;
     while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        change = atoi(sqlite3_column_text(stmt, 0))
+        printf("%s\n", sqlite3_column_text(stmt, 0));
+        printf("%s\n", sqlite3_column_text(stmt, 1));
+        change = atoi((char *)sqlite3_column_text(stmt, 0))-atoi((char *)sqlite3_column_text(stmt, 1));
     }
     if (change==0){
       printf("iteriation over.\n");
