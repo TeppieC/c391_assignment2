@@ -26,26 +26,7 @@ int main(int argc, char **argv){
 
 /************** generating coordinates for all nodes **********************************/
 
-//  char *sql_gen_coords = "INSERT INTO TABLE rtree_nodes (node_id, start_x, end_x, start_y, end_y) \
-                          AS \
-                            WITH RECURSIVE nodes(nodeno, start_x, end_x, start_y, end_y) \
-                            AS ( \
-                              SELECT r.nodeno as nodeno, \
-                                MIN(p.start_x) as start_x, MAX(p.end_x) as end_x, \
-                                MIN(p.start_y) as start_y, MAX(p.end_y) as end_y \
-                              FROM rtree_index p, rtree_index_rowid r \
-                              WHERE p.id = r.rowid \
-                              UNION \
-                              SELECT pa.parentnode as nodeno, \
-                                     MIN(n.start_x) as start_x, MAX(n.end_x) as end_x, \
-                                     MIN(n.start_y) as start_y, MAX(n.end_y) as end_y \
-                              FROM rtree_index_parent pa, nodes n \
-                              WHERE pa.nodeno = n.nodeno \
-                            ) SELECT * \
-                            FROM nodes;"
-    char *sql_gen_coords = "CREATE TABLE innerNodes AS\
-                            WITH RECURSIVE nodes(nodeno, start_x, end_x, start_y, end_y) \
-                            AS ( \
+  char *sql_gen_coords = "CREATE TABLE innerNodes AS\
                               SELECT r.nodeno as nodeno, \
                                 MIN(p.start_x) as start_x, \
                                 MAX(p.end_x) as end_x, \
@@ -53,22 +34,39 @@ int main(int argc, char **argv){
                                 MAX(p.end_y) as end_y \
                               FROM rtree_index p, rtree_index_rowid r \
                               WHERE p.id = r.rowid \
-                              UNION \
-                              SELECT pa.parentnode as nodeno, \
-                                     (SELECT MIN(n1.start_x) FROM nodes n1 WHERE n1.nodeno = pa.nodeno) as start_x, \
-                                     (SELECT MAX(n2.end_x) FROM nodes n2 WHERE n2.nodeno = pa.nodeno) as end_x, \
-                                     (SELECT MIN(n3.start_y) FROM nodes n3 WHERE n3.nodeno = pa.nodeno) as start_y, \
-                                     (SELECT MAX(n4.end_y) FROM nodes n4 WHERE n4.nodeno = pa.nodeno) as end_y \
-                              FROM rtree_index_parent pa
-                            ) SELECT * \
-                            FROM nodes;";
+                              GROUP BY r.nodeno";
+
   rc = sqlite3_exec(db, sql_gen_coords, 0, 0, &zErrMsg);
   if( rc != SQLITE_OK ){
   fprintf(stderr, "SQL error: %s\n", zErrMsg);
      sqlite3_free(zErrMsg);
   }else{
-     fprintf(stdout, "successfully create a table of airports with no more than 3 connections from YEG\n");
+     fprintf(stdout, "table created successful\n");
   }
+
+  char * sql_insert_coords = "INSERT INTO innerNodes(nodeno, start_x, end_x, start_y, end_y) \
+                                SELECT  p.parentnode as nodeno, \
+                                        MIN(n.start_x) as start_x, \
+                                        MAX(n.end_x) as end_x, \
+                                        MIN(n.start_y) as start_y, \
+                                        MAX(n.end_y) as end_y \
+                                  FROM rtree_index_parent p, innerNodes n \
+                                  WHERE p.nodeno = n.nodeno \
+                                  GROUP BY p.parentnode";
+  while(1){
+    rc = sqlite3_exec(db, sql_insert_coords, 0, 0, &zErrMsg);
+    if( rc != SQLITE_OK ){
+    fprintf(stderr, "SQL error: %s\n", zErrMsg);
+       sqlite3_free(zErrMsg);
+    }else{
+       fprintf(stdout, "table created successful\n");
+    }
+    if (sqlite3_total_changes(db)==1){
+      printf("iteriation over.\n");
+      break;
+    }
+  }
+
 /*
   // deal with the parameters
   char *x1 = argv[2];
