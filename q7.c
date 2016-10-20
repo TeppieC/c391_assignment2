@@ -55,23 +55,23 @@ int main(int argc, char **argv){
                                   GROUP BY p.parentnode";
   while(1){
 
-    sqlite3_close(db);
-    rc = sqlite3_open(argv[1], &db);
-    if( rc ){
-      fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-      sqlite3_close(db);
-      return(1);
-    }
-
     rc = sqlite3_exec(db, sql_insert_coords, 0, 0, &zErrMsg);
     if( rc != SQLITE_OK ){
     fprintf(stderr, "SQL error: %s\n", zErrMsg);
        sqlite3_free(zErrMsg);
     }else{
-       fprintf(stdout, "table created successful\n");
+       fprintf(stdout, "table updated successful\n");
     }
-    printf("%d\n", sqlite3_total_changes(db));
-    if (sqlite3_total_changes(db)==1){
+
+    char *sql_stmt_check = "SELECT count(i.nodeno)-count(n.nodeno) \
+                            FROM innerNodes i, rtree_index_node n"
+
+    rc = sqlite3_prepare_v2(db, sql_stmt_check, -1, &stmt, 0);
+    int change = -1
+    while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        change = atoi(sqlite3_column_text(stmt, 0))
+    }
+    if (change==0){
       printf("iteriation over.\n");
       break;
     }
