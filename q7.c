@@ -11,8 +11,8 @@ int main(int argc, char **argv){
   int rc;
 
   // check the arguments
-  if( argc!=7 ){
-    fprintf(stderr, "Usage: %s <database file> <x1> <y1> <x2> <y2> <c>\n", argv[0]);
+  if( argc!=2 ){
+    fprintf(stderr, "Usage: %s <database file> \n", argv[0]);
   	return(1);
 	}
 
@@ -47,18 +47,21 @@ int main(int argc, char **argv){
                             WITH RECURSIVE nodes(nodeno, start_x, end_x, start_y, end_y) \
                             AS ( \
                               SELECT r.nodeno as nodeno, \
-                                MIN(p.start_x) as start_x, MAX(p.end_x) as end_x, \
-                                MIN(p.start_y) as start_y, MAX(p.end_y) as end_y \
+                                MIN(p.start_x) as start_x, \
+                                MAX(p.end_x) as end_x, \
+                                MIN(p.start_y) as start_y, \
+                                MAX(p.end_y) as end_y \
                               FROM rtree_index p, rtree_index_rowid r \
                               WHERE p.id = r.rowid \
                               UNION \
                               SELECT pa.parentnode as nodeno, \
-                                     MIN(n.start_x) as start_x, MAX(n.end_x) as end_x, \
-                                     MIN(n.start_y) as start_y, MAX(n.end_y) as end_y \
-                              FROM rtree_index_parent pa, nodes n \
-                              WHERE pa.nodeno = n.nodeno \
+                                     (SELECT MIN(n1.start_x) FROM nodes n1 WHERE n1.nodeno = pa.nodeno) as start_x, \
+                                     (SELECT MAX(n2.end_x) FROM nodes n2 WHERE n2.nodeno = pa.nodeno) as end_x, \
+                                     (SELECT MIN(n3.start_y) FROM nodes n3 WHERE n3.nodeno = pa.nodeno) as start_y, \
+                                     (SELECT MAX(n4.end_y) FROM nodes n4 WHERE n4.nodeno = pa.nodeno) as end_y \
+                              FROM rtree_index_parent pa
                             ) SELECT * \
-                            FROM nodes;"
+                            FROM nodes;";
   rc = sqlite3_exec(db, sql_gen_coords, 0, 0, &zErrMsg);
   if( rc != SQLITE_OK ){
   fprintf(stderr, "SQL error: %s\n", zErrMsg);
