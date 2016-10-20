@@ -54,6 +54,15 @@ int main(int argc, char **argv){
                                   WHERE p.nodeno = n.nodeno \
                                   GROUP BY p.parentnode";
   while(1){
+
+    sqlite3_close(db);
+    rc = sqlite3_open(argv[1], &db);
+    if( rc ){
+      fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+      sqlite3_close(db);
+      return(1);
+    }
+
     rc = sqlite3_exec(db, sql_insert_coords, 0, 0, &zErrMsg);
     if( rc != SQLITE_OK ){
     fprintf(stderr, "SQL error: %s\n", zErrMsg);
@@ -61,6 +70,7 @@ int main(int argc, char **argv){
     }else{
        fprintf(stdout, "table created successful\n");
     }
+    printf("%d\n", sqlite3_total_changes(db));
     if (sqlite3_total_changes(db)==1){
       printf("iteriation over.\n");
       break;
