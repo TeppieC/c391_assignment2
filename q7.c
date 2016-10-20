@@ -11,8 +11,8 @@ int main(int argc, char **argv){
   int rc;
 
   // check the arguments
-  if( argc!=2 ){
-    fprintf(stderr, "Usage: %s <database file> \n", argv[0]);
+  if( argc!=4 ){
+    fprintf(stderr, "Usage: %s <database file> <x1> <y1>\n", argv[0]);
   	return(1);
 	}
 
@@ -51,9 +51,11 @@ int main(int argc, char **argv){
                                         MIN(n.start_y) as start_y, \
                                         MAX(n.end_y) as end_y \
                                   FROM rtree_index_parent p, innerNodes n \
-                                  WHERE p.nodeno = n.nodeno \
+                                  WHERE p.nodeno = n.nodeno AND \
+                                        p.parentnode NOT IN (select nodeno from innerNodes) \
                                   GROUP BY p.parentnode";
-  while(1){
+  int loops = 0;
+  while(loops<2){
 
     rc = sqlite3_exec(db, sql_insert_coords, 0, 0, &zErrMsg);
     if( rc != SQLITE_OK ){
@@ -62,75 +64,33 @@ int main(int argc, char **argv){
     }else{
        fprintf(stdout, "table updated successful\n");
     }
+    loops+=1;
 
-    char *sql_stmt_check = "SELECT count(i.nodeno), count(n.nodeno) \
+    /**** next time ***********/
+    // check # of rows inserted
+    //char *sql_stmt_check = "SELECT count(distinct n.nodeno)-count(distinct i.nodeno) \
                             FROM innerNodes i, rtree_index_node n";
-
+    /*
     rc = sqlite3_prepare_v2(db, sql_stmt_check, -1, &stmt, 0);
     int change = -1;
     while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
         printf("%s\n", sqlite3_column_text(stmt, 0));
-        printf("%s\n", sqlite3_column_text(stmt, 1));
-        change = atoi((char *)sqlite3_column_text(stmt, 0))-atoi((char *)sqlite3_column_text(stmt, 1));
+        change = atoi((char *)sqlite3_column_text(stmt, 0));
     }
     if (change==0){
       printf("iteriation over.\n");
       break;
-    }
+    }*/
   }
 
-/*
   // deal with the parameters
   char *x1 = argv[2];
   char *y1 = argv[3];
-  char *x2 = argv[4];
-  char *y2 = argv[5];
-  char *c = argv[6];
-  printf("Querying the bounding rectangle (%s,%s), (%s,%s), of class: %s\n", x1,y1,x2,y2,c);
+  printf("Querying for the point (%s, %s)\n", x1,y1);
 
 
-  // query for all objects within the bounding box
-  char *sql_stmt = "SELECT p.* \
-                      FROM rtree_index r, poi_tag p \
-                      WHERE r.start_x>=? AND r.end_x<=? \
-                      AND r.start_y>=?  AND r.end_y<=? \
-                      AND p.id = r.id \
-                      AND p.key='class' AND p.value=?;";
+  /******** C program for NN searching algorithm ******************/
+  
 
-    // Allocates storage
-    //char *sql = (char*)malloc(300 * sizeof(char));
-    // Prints "Hello world!" on hello_world
-    //sprintf(sql, sql_stmt, x1, x2, y1, y2, c);
-    //printf("%s\n", sql);
-
-    rc = sqlite3_prepare_v2(db, sql_stmt, -1, &stmt, 0);
-
-    if (rc != SQLITE_OK) {  
-          fprintf(stderr, "Preparation failed: %s\n", sqlite3_errmsg(db));
-          sqlite3_close(db);
-          return 1;
-    }    
-
-    // bind the value 
-    sqlite3_bind_text(stmt, 1, x1, strlen(x1), 0);
-    sqlite3_bind_text(stmt, 2, x2, strlen(x2), 0);
-    sqlite3_bind_text(stmt, 3, y1, strlen(y1), 0);
-    sqlite3_bind_text(stmt, 4, y2, strlen(y2), 0);
-    sqlite3_bind_text(stmt, 5, c, strlen(c), 0);
-    
-    int count = 0;
-    while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-          int col;
-          count+=1;
-          for(col=0; col<sqlite3_column_count(stmt)-1; col++) {
-            printf("%s|", sqlite3_column_text(stmt, col));
-          }
-          printf("%s", sqlite3_column_text(stmt, col));
-          printf("\n");
-    }
-    printf("%d rows found\n", count);
-    sqlite3_finalize(stmt); //always finalize a statement
-  */
-    //free(sql);
-    sqlite3_close(db);
+  sqlite3_close(db);
 }
