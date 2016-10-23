@@ -3,11 +3,99 @@
 #include <sqlite3.h>
 #include <string.h>
 
-int main(int argc, char **argv){
-	sqlite3 *db; //the database
-  sqlite3_stmt *stmt; //the update statement
-  char *zErrMsg = 0;
+/* Double function that returns the square of a number */
+void my_function(sqlite3_context* ctx, int nargs, sqlite3_value** values){
+  double x = sqlite3_value_double(values[0]);
+  double y = x*x;
+  sqlite3_result_double(ctx, y);
+}
 
+//https://webdocs.cs.ualberta.ca/~denilson/teaching/cmput391/sample_functions.c
+void print_result(sqlite3_stmt *stmt){
+	int rc;
+
+	while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+		int col;
+		for(col=0; col<sqlite3_column_count(stmt)-1; col++) {
+			printf("%s|", sqlite3_column_text(stmt, col));
+		}
+		printf("%s", sqlite3_column_text(stmt, col));
+		printf("\n");
+	}
+}
+
+Struct Node *extractNodes(char *nodeString, Struct Node *branchList){
+  const char s[2] = " ";
+  char *token;
+  char* result[300];
+
+  int i = 0;
+  token = strtok(nodeString, s);
+  while(token != NULL){
+
+    if (token[0] == "{"){
+      memmove(token, token+1, strlen(token));
+    }
+    printf("%s\n", token);
+
+    result[i] = token;
+    token = strtok(NULL, s);
+    i+=1;
+  }
+
+  int j=0;
+  int n=0;
+  for(j=0;j<i;j+=5){
+    branchList[n].node_index = result[j];//may need to cast--> atoi()
+    branchList[n].node_index = result[j+1];//may need to cast--> double()
+    branchList[n].node_index = result[j+2];
+    branchList[n].node_index = result[j+3];
+    branchList[n].node_index = result[j+4];
+    n+=1;
+  }
+}
+
+void genBranchList(sqlite3 *db, Struct Point p, Struct Node node, Struct Node* branchList){
+  int rc;
+  sqlite3_stmt *stmt;
+
+  char *sql_stmt = "SELECT rtreenode(2,data) FROM rtree_index_node WHERE nodeno=?";
+
+  rc = sqlite3_prepare_v2(db, sql_stmt, -1, &stmt, 0);
+  
+  sqlite3_bind_int(stmt, 1, node.node_index);
+
+  //print_result(stmt);
+  while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+    printf("%s", sqlite3_column_text(stmt, 0));
+    char *result = sqlite3_column_text(stmt, 0); // parse from the query result
+    extractNodes(result, branchList);// extract the result into the branchList
+    printf("\n");
+  }
+
+  int i=0;
+  for(i=0;i<200;i++){
+    if (branchList[i]==NULL){ // may raise error, because I don't know how to determine if the cell is blank!!!!!!!!!!!!!!!!!!!!!!!
+      break;
+    }
+    // parameter: branchList[i] is a Node struct, p is a Point struct
+    branchList[i].dist = minDist(branchList[i], p);
+  }
+}
+
+double cmpfunc (const void * a, const void * b){
+  return ( *(double*)a.dist - *(double*)b.dist);
+}
+
+void sortBranchList(sqlite3 *db, Struct Node* branchList){
+  int length = sizeof(branchList)/sizeof(Struct Node);//aquiring the length of the branchList
+  qsort(branchList, length, sizeof(Struct Node), cmpfunc); 
+}
+
+int main(int argc, char **argv){
+  sqlite3 *db;
+  sqlite3_stmt *stmt;
+  char *zErrMsg = 0;
   int rc;
 
   // check the arguments
@@ -24,65 +112,6 @@ int main(int argc, char **argv){
   	return(1);
   }
 
-/************** generating coordinates for all nodes **********************************/
-
-  char *sql_gen_coords = "CREATE TABLE innerNodes AS\
-                              SELECT r.nodeno as nodeno, \
-                                MIN(p.start_x) as start_x, \
-                                MAX(p.end_x) as end_x, \
-                                MIN(p.start_y) as start_y, \
-                                MAX(p.end_y) as end_y \
-                              FROM rtree_index p, rtree_index_rowid r \
-                              WHERE p.id = r.rowid \
-                              GROUP BY r.nodeno";
-
-  rc = sqlite3_exec(db, sql_gen_coords, 0, 0, &zErrMsg);
-  if( rc != SQLITE_OK ){
-  fprintf(stderr, "SQL error: %s\n", zErrMsg);
-     sqlite3_free(zErrMsg);
-  }else{
-     fprintf(stdout, "table created successful\n");
-  }
-
-  char * sql_insert_coords = "INSERT INTO innerNodes(nodeno, start_x, end_x, start_y, end_y) \
-                                SELECT  p.parentnode as nodeno, \
-                                        MIN(n.start_x) as start_x, \
-                                        MAX(n.end_x) as end_x, \
-                                        MIN(n.start_y) as start_y, \
-                                        MAX(n.end_y) as end_y \
-                                  FROM rtree_index_parent p, innerNodes n \
-                                  WHERE p.nodeno = n.nodeno AND \
-                                        p.parentnode NOT IN (select nodeno from innerNodes) \
-                                  GROUP BY p.parentnode";
-  int loops = 0;
-  while(loops<2){
-
-    rc = sqlite3_exec(db, sql_insert_coords, 0, 0, &zErrMsg);
-    if( rc != SQLITE_OK ){
-    fprintf(stderr, "SQL error: %s\n", zErrMsg);
-       sqlite3_free(zErrMsg);
-    }else{
-       fprintf(stdout, "table updated successful\n");
-    }
-    loops+=1;
-
-    /**** next time ***********/
-    // check # of rows inserted
-    //char *sql_stmt_check = "SELECT count(distinct n.nodeno)-count(distinct i.nodeno) \
-                            FROM innerNodes i, rtree_index_node n";
-    /*
-    rc = sqlite3_prepare_v2(db, sql_stmt_check, -1, &stmt, 0);
-    int change = -1;
-    while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        printf("%s\n", sqlite3_column_text(stmt, 0));
-        change = atoi((char *)sqlite3_column_text(stmt, 0));
-    }
-    if (change==0){
-      printf("iteriation over.\n");
-      break;
-    }*/
-  }
-
   // deal with the parameters
   char *x1 = argv[2];
   char *y1 = argv[3];
@@ -91,6 +120,6 @@ int main(int argc, char **argv){
 
   /******** C program for NN searching algorithm ******************/
   
-
+  
   sqlite3_close(db);
 }
