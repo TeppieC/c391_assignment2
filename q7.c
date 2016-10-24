@@ -205,7 +205,16 @@ double* getRect(sqlite3 *db, int rectId){
 }
 
 int cmpfunc (const void * a, const void * b){
-  return (((struct Node*)a)->mindist - ((struct Node*)b)->mindist);
+  const struct Node * aa = a;
+  const struct Node * bb = b;
+
+  if (aa->mindist > bb->mindist){
+    return 1;
+  }else if (aa->mindist = bb->mindist){
+    return 0;
+  }else{
+    return -1;
+  }
 }
 
 void sortBranchList(struct Node* branchList){
