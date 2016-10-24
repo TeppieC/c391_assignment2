@@ -17,6 +17,15 @@ struct Node {
   double maxY;
 };
 
+struct Rect {
+  int id;
+  double minX;
+  double minY;
+  double maxX;
+  double maxY;
+  double dist;
+};
+
 struct Point {
   double x;
   double y;
@@ -67,25 +76,17 @@ double minDist (struct Node node, struct Point p) {
   return mindist;
 }
 
-/* Double function that returns the square of a number */
-void my_function(sqlite3_context* ctx, int nargs, sqlite3_value** values){
-  double x = sqlite3_value_double(values[0]);
-  double y = x*x;
-  sqlite3_result_double(ctx, y);
+double minMaxDist(struct Node node, struct Point p){
+  double minMaxDist;
+  /* TODO */
+  return minMaxDist;
 }
 
-//https://webdocs.cs.ualberta.ca/~denilson/teaching/cmput391/sample_functions.c
-void print_result(sqlite3_stmt *stmt){
-	int rc;
+double objectDist(struct Point poi, double minX, double maxX, double minY, double maxY){
+  /* TODO: compute the distance between point poi and the rect*/
+  int dist=0;
 
-	while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-		int col;
-		for(col=0; col<sqlite3_column_count(stmt)-1; col++) {
-			printf("%s|", sqlite3_column_text(stmt, col));
-		}
-		printf("%s", sqlite3_column_text(stmt, col));
-		printf("\n");
-	}
+  return dist;
 }
 
 //struct Node *extractNodes(char *nodeString, struct Node *branchList){
@@ -120,6 +121,12 @@ void extractNodes(char *nodeString, struct Node *branchList){
   }
 }
 
+int lengthOfList(struct Node* branchList){//?????????????????????????????????????????????????????????????????????????????????????????????
+  /* Return the length of a branchList */
+  int length = sizeof(branchList)/sizeof(struct Node);//aquiring the length of the branchList
+  return length;
+}
+
 void genBranchList(sqlite3 *db, struct Point p, struct Node node, struct Node* branchList){
   int rc;
   sqlite3_stmt *stmt;
@@ -139,22 +146,156 @@ void genBranchList(sqlite3 *db, struct Point p, struct Node node, struct Node* b
   }
 
   int i=0;
-  for(i=0;i<200;i++){
-    if (branchList[i].count == 0) { // may raise error, because I don't know how to determine if the cell is blank!!!!!!!!!!!!!!!!!!!!!!!
-      break;
-    }
-    // parameter: branchList[i] is a Node struct, p is a Point struct
+
+  int length = lengthOfList(branchList);
+  for(i=0;i<length;i++){    // parameter: branchList[i] is a Node struct, p is a Point struct
     branchList[i].mindist = minDist(branchList[i], p);
   }
+}
+
+int* genChildrenObject(sqlite3 *db, struct Node node){
+  /* Return the id's of the children of a leaf node */
+
+  int rc;
+  sqlite3_stmt *stmt;
+  int* children; ////////
+
+  char *sql_stmt = "SELECT rowid FROM rtree_index_rowid WHERE nodeno=?";
+
+  rc = sqlite3_prepare_v2(db, sql_stmt, -1, &stmt, 0);
+  
+  sqlite3_bind_int(stmt, 1, node.node_index);
+
+  //print_result(stmt);
+  int i = 0;
+  while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+    printf("%s", sqlite3_column_text(stmt, 0));
+    char *result = (char *)sqlite3_column_text(stmt, 0); // parse from the query result
+    *children+i = atoi(result); /////////////////////////// is it okay??????
+    i+=1;
+    printf("\n");
+  }
+
+  return children;
+}
+
+double* getRect(sqlite3 *db, int rectId){
+  /* Query for the coordinates given the id of a rectangle */
+
+  int rc;
+  sqlite3_stmt *stmt;
+  double rect[4];////////////////////////////???????????????????????????
+
+  char *sql_stmt = "SELECT start_X, end_X, start_Y, end_Y FROM rtree_index WHERE id=?";
+  rc = sqlite3_prepare_v2(db, sql_stmt, -1, &stmt, 0);
+  sqlite3_bind_int(stmt, 1, rectId);
+  
+  int i = 0;
+  while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+    //printf("%s", sqlite3_column_text(stmt, 0));
+    int col;
+    for(col=0; col<sqlite3_column_count(stmt); col++) {
+      rect[col] = atof((char *)sqlite3_column_text(stmt, col));
+    }
+
+    i+=1;
+    //printf("\n");
+  }
+  return rect;
 }
 
 int cmpfunc (const void * a, const void * b){
   return (((struct Node*)a)->mindist - ((struct Node*)b)->mindist);
 }
 
-void sortBranchList(sqlite3 *db, struct Node* branchList){
+void sortBranchList(struct Node* branchList){
   int length = sizeof(branchList)/sizeof(struct Node);//aquiring the length of the branchList
   qsort(branchList, length, sizeof(struct Node), cmpfunc); 
+}
+
+int pruneBranchList(sqlite3 *db, struct Node node, struct Point poi, struct Rect nearest, struct Node* branchList){
+  /* TODO */
+  int last = 0;
+
+  return last;
+}
+
+int leafCount(sqlite3 *db, struct Node node){
+  /* Return the # of children of a leaf node. 
+    If it is not a leaf node, return 0 instead. */
+
+  int count;
+  int rc;
+  sqlite3_stmt *stmt;
+
+  char *sql_stmt = "SELECT count(rowid) FROM rtree_index_rowid WHERE nodeno=?";
+
+  rc = sqlite3_prepare_v2(db, sql_stmt, -1, &stmt, 0);
+  
+  sqlite3_bind_int(stmt, 1, node.node_index);
+
+  //print_result(stmt);
+  while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+    printf("Leaf Node's Children Count: %s", sqlite3_column_text(stmt, 0));
+    char *result = (char *)sqlite3_column_text(stmt, 0); // parse from the query result
+    count = atoi(result); /////////////////////////// is it okay??????
+    printf("\n");
+  }
+
+  return count;
+}
+
+
+void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, struct Rect nearest){//should parameter be pointers????????????????????
+  //struct Point poi;
+  struct Node newNode;
+  struct Node branchList[200];
+  int dist;
+  int last;
+  int i;
+
+  int leafCount = leafCount(db, node);
+  if (leafCount>0)
+  {
+    int children[leafCount];
+    children = genChildrenObject(db, node);
+    
+    struct Rect nearest;
+    nearest.id = children[0];//init
+    double rect[4] = getRect(db, children[i]);
+    nearest.dist = objectDist(poi, rect[0], rect[1], rect[2], rect[3]);
+    for (i = 0; i < leafCount; ++i)
+    {
+      rect[4] = getRect(db, children[i]);//////////////////////////
+      dist = objectDist(poi, rect[0], rect[1], rect[2], rect[3]);
+      if (dist<nearest.dist)
+      {
+        nearest.id = children[i];
+        nearest.minX = rect[0];
+        nearest.maxX = rect[1];
+        nearest.minY = rect[2];
+        nearest.maxY = rect[3];
+        nearest.dist = dist;
+      }
+    }
+  }else{
+    genBranchList(db, poi, node, branchList);
+    sortBranchList(branchList);
+    //Perform Downward Pruning ???????????????????????????????????????????????
+    last = pruneBranchList(db, node, poi, nearest, branchList); //this will require dynamically change the branchlist how??????????????
+
+    for (i = 0; i < last; ++i)
+    {
+      newNode = branchList[i];
+
+      //Recursively visit chile nodes
+      nearestNeighborSearch(db, newNode, poi, nearest);
+
+      //Perform Upward Pruning???????????????????????????????????????????????
+      last = pruneBranchList(db, node, poi, nearest, branchList);
+    }
+
+  }
 }
 
 int main(int argc, char **argv){
@@ -184,17 +325,17 @@ int main(int argc, char **argv){
 
 
   /******** C program for NN searching algorithm ******************/
-  
   struct Point poi;
   struct Node node;
-  struct Node branchList[200];
+  struct Rect nearest;
+
   poi.x = atoi(x1);
   poi.y = atoi(y1);
   poi = *(struct Point *)malloc(sizeof(struct Point));
   node = *(struct Node *)malloc(sizeof(struct Node));
-  genBranchList(db, poi, node, branchList);
+  nearest = *(struct Rect *)malloc(sizeof(struct Rect));/// zhe shi gan ma???????????????????????
 
-  // import from rtree
+  nearestNeighborSearch(db, node, poi, nearest);
 
   sqlite3_close(db);
 }
