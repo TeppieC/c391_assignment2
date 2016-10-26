@@ -153,12 +153,12 @@ void genBranchList(sqlite3 *db, struct Point p, struct Node node, struct Node* b
   }
 }
 
-int* genChildrenObject(sqlite3 *db, struct Node node){
+void genChildrenObject(sqlite3 *db, struct Node node, int* children){
   /* Return the id's of the children of a leaf node */
 
   int rc;
   sqlite3_stmt *stmt;
-  int* children; ////////
+  //int* children; ////////
 
   char *sql_stmt = "SELECT rowid FROM rtree_index_rowid WHERE nodeno=?";
 
@@ -171,12 +171,10 @@ int* genChildrenObject(sqlite3 *db, struct Node node){
   while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
     printf("%s", sqlite3_column_text(stmt, 0));
     char *result = (char *)sqlite3_column_text(stmt, 0); // parse from the query result
-    *children+i = atoi(result); /////////////////////////// is it okay??????
+    children[i] = atoi(result); /////////////////////////// is it okay??????
     i+=1;
     printf("\n");
   }
-
-  return children;
 }
 
 double* getRect(sqlite3 *db, int rectId){
@@ -210,7 +208,7 @@ int cmpfunc (const void * a, const void * b){
 
   if (aa->mindist > bb->mindist){
     return 1;
-  }else if (aa->mindist = bb->mindist){
+  }else if (aa->mindist == bb->mindist){
     return 0;
   }else{
     return -1;
@@ -267,7 +265,7 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
   if (leafCount>0)
   {
     int children[leafCount];
-    children = genChildrenObject(db, node);
+    genChildrenObject(db, node, children);
     
     struct Rect nearest;
     nearest.id = children[0];//init
