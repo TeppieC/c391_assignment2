@@ -177,7 +177,7 @@ void genChildrenObject(sqlite3 *db, struct Node node, int* children){
   }
 }
 
-double* getRect(sqlite3 *db, int rectId){
+void getRect(sqlite3 *db, int rectId){
   /* Query for the coordinates given the id of a rectangle */
 
   int rc;
@@ -199,7 +199,7 @@ double* getRect(sqlite3 *db, int rectId){
     i+=1;
     //printf("\n");
   }
-  return rect;
+  //return rect;
 }
 
 int cmpfunc (const void * a, const void * b){
@@ -227,7 +227,7 @@ int pruneBranchList(sqlite3 *db, struct Node node, struct Point poi, struct Rect
   return last;
 }
 
-int leafCount(sqlite3 *db, struct Node node){
+int LeafCount(sqlite3 *db, struct Node node){
   /* Return the # of children of a leaf node. 
     If it is not a leaf node, return 0 instead. */
 
@@ -259,21 +259,28 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
   struct Node branchList[200];
   int dist;
   int last;
-  int i;
+  int i,j;
 
-  int leafCount = leafCount(db, node);
+  int leafCount;
+  leafCount = LeafCount(db, node);
   if (leafCount>0)
   {
-    int children[leafCount];
+    int children[leafCount]; //int children[lrafCount] -> double children[leafCount]
     genChildrenObject(db, node, children);
     
     struct Rect nearest;
     nearest.id = children[0];//init
-    double rect[4] = getRect(db, children[i]);
+    double rect[4];  //assign 4 elements to rect????
+    getRect(db, children[i]); // where i comes from with no inital value??????? and never increase????
+    for(j=0; j<4; j++) {
+      rect[i] = (double)children[j];
+    }
     nearest.dist = objectDist(poi, rect[0], rect[1], rect[2], rect[3]);
     for (i = 0; i < leafCount; ++i)
     {
-      rect[4] = getRect(db, children[i]);//////////////////////////
+      //rect[4] = getRect(db, children[i]);//////////////////////////
+      getRect(db, children[i]);
+      rect[i] = (double)children[i];
       dist = objectDist(poi, rect[0], rect[1], rect[2], rect[3]);
       if (dist<nearest.dist)
       {
