@@ -257,8 +257,8 @@ int cmpfunc (const void * a, const void * b){
   }
 }
 
-void sortBranchList(struct Node* branchList){
-  int length = sizeof(branchList)/sizeof(struct Node);//aquiring the length of the branchList
+void sortBranchList(struct Node* branchList, int length){
+  /* sorting based on mindist */
   qsort(branchList, length, sizeof(struct Node), cmpfunc); 
 }
 
@@ -297,7 +297,6 @@ int leafCount(sqlite3 *db, struct Node node){
 
   return count;
 }
-
 
 void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, struct Rect nearest){//should parameter be pointers????????????????????
   //struct Point poi;
@@ -340,8 +339,8 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
     printf("id:%d minX:%f maxX:%f minY:%f maxY:%f dist:%f\n", nearest.id, nearest.minX, nearest.maxX, nearest.minY, nearest.maxY, nearest.dist);
 
   }else{
-    genBranchList(db, poi, node, branchList);
-    sortBranchList(branchList);
+    int length = genBranchList(db, poi, node, branchList);
+    sortBranchList(branchList, length);
     //Perform Downward Pruning ???????????????????????????????????????????????
     last = pruneBranchList(db, node, poi, nearest, branchList); //this will require dynamically change the branchlist how??????????????
 
@@ -420,6 +419,7 @@ int main(int argc, char **argv){
   testNode1101.minY = 5.34161;
   testNode1101.maxY = 994.443;
   testNode1101.mindist = minDist(testNode1101, testPoi);
+  testNode1101.minmaxdist = minMaxDist(testNode1101, testPoi);
   //printf("%f\n", testNode1101.mindist);
 
   printf("test for test1472\n");
@@ -430,6 +430,8 @@ int main(int argc, char **argv){
   testNode1472.minY = 681.342;
   testNode1472.maxY = 994.443;
   testNode1472.mindist = minDist(testNode1472, testPoi);
+  testNode1472.minmaxdist = minMaxDist(testNode1472, testPoi);
+
 
   printf("test for test890\n");
   struct Node testNode890;
@@ -439,6 +441,7 @@ int main(int argc, char **argv){
   testNode890.minY = 484.865;
   testNode890.maxY = 629.767;
   testNode890.mindist = minDist(testNode890, testPoi);
+  testNode890.minmaxdist = minMaxDist(testNode890, testPoi);
   //printf("%f\n", testNode1472.mindist);*/
 
   printf("test for test53, a leaf node\n");
@@ -450,35 +453,53 @@ int main(int argc, char **argv){
   testNode53.minY = 411.67;
   testNode53.maxY = 502.449;
   testNode53.mindist = minDist(testNode53, testPoi);
+  testNode53.minmaxdist = minMaxDist(testNode53, testPoi);
 
 /* extractNodes: OK*/
   //char nodeString[] = "{1101 2.74727 575.684 5.34161 994.443} {1100 526.545 997.596 4.84267 994.657}";//// cannot use char*???
   //char nodeString[] = "{146 2.75355 90.1406 359.665 480.358} {652 3.01694 437.572 524.205 709.73} {43 2.97623 312.291 5.576 386.872} {1099 90.3024 193.208 398.932 510.586} {219 95.5809 430.375 468.996 579.271} {802 116.597 149.479 374.843 400.528} {1085 149.113 260.103 367.148 509.154} {1057 250.55 320.57 369.577 509.633} {892 302.808 425.133 8.78182 234.717} {519 316.861 411.414 374.148 509.966} {274 385.343 442.121 7.02256 276.013} {812 402.164 526.629 227.145 265.49} {590 396.143 553.229 260.617 310.096} {783 405.72 487.73 372.001 510.997} {300 408.413 487.749 301.7 341.671} {959 434.862 560.883 5.34161 149.199} {633 436.161 575.684 608.962 985.94} {758 438.37 528.135 560.579 745.281} {382 430.2 525.865 502.837 561.902} {430 470.624 570.692 361.295 429.932} {406 483.626 526.757 302.32 391.654} {1125 148.166 154.519 398.732 432.215} {1180 408.84 484.389 331.887 391.472} {1245 284.246 409.954 235.74 373.258} {1357 440.719 559.541 148.646 233.403} {1472 2.74727 474.458 681.342 994.443} {1564 469.916 569.906 432.828 510.025}";
   //int length = extractNodes(nodeString, testBranchList);
-/* genBranchList: OK*/ /*
+/* genBranchList: OK*/ 
   struct Node testBranchList[200];
   int length = genBranchList(db, testPoi, testNode1101, testBranchList);
   printf("length of the testBranchList: %d\n", length);
-  sortBranchList(genBranchList);
   for (i = 0; i < length; ++i)
   {
     printf("%d\n", testBranchList[i].node_index);
-    printf("%f\n", testBranchList[i].minX);
-    printf("%f\n", testBranchList[i].maxX);
-    printf("%f\n", testBranchList[i].minY);
-    printf("%f\n", testBranchList[i].maxY);
-  }*/
+    //printf("%f\n", testBranchList[i].minX);
+    //printf("%f\n", testBranchList[i].maxX);
+    //printf("%f\n", testBranchList[i].minY);
+    //printf("%f\n", testBranchList[i].maxY);
+    printf("%f\n", testBranchList[i].mindist);
+    printf("%f\n", testBranchList[i].minmaxdist);
+    printf("\n");
+  }
+
+  printf("sorting\n");
+  sortBranchList(testBranchList, length);
+
+  for (i = 0; i < length; ++i)
+  {
+    printf("%d\n", testBranchList[i].node_index);
+    //printf("%f\n", testBranchList[i].minX);
+    //printf("%f\n", testBranchList[i].maxX);
+    //printf("%f\n", testBranchList[i].minY);
+    //printf("%f\n", testBranchList[i].maxY);
+    printf("%f\n", testBranchList[i].mindist);
+    printf("%f\n", testBranchList[i].minmaxdist);
+    printf("\n");
+  }
 
 /* genChildrenObject: OK */
+  /*
   long children[50]; // could we use other forms? just wondering
   int numChildrenObjects = genChildrenObject(db, testNode53, children); //max:39
   printf("%d\n", numChildrenObjects);
   for (i = 0; i < numChildrenObjects; ++i)
   {
-    /* code */
     printf("%ld\n", children[i]);
   }
-
+*/
   //nearestNeighborSearch(db, node, poi, nearest);
 
   sqlite3_close(db);
