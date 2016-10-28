@@ -273,6 +273,26 @@ int pruneBranchList(sqlite3 *db, struct Node node, struct Point poi, struct Rect
   return last;
 }
 
+int DownwardPuring (struct Node node, struct Point poi, struct Rect Nearest, struct Node* branchList, int length) {
+  int i, last;
+  last = 0;
+  double min_minmaxdist;
+  min_minmaxdist = branchList[0].minmaxdist;
+  for(i=0; i<length; i++) {
+    if(branchList[i+1].mindist < min_minmaxdist) {
+      if(branchList[i+1].minmaxdist < branchList[i].minmaxdist) {
+        min_minmaxdist = branchList[i+1].minmaxdist;
+      }
+      last++;
+    }
+    else {
+      branchList[i].node_index = 0;
+      break;
+    }
+  }
+  return last;
+}
+
 int leafCount(sqlite3 *db, struct Node node){
   /* Return the # of children of a leaf node. 
     If it is not a leaf node, return 0 instead. */
