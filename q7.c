@@ -12,7 +12,6 @@
 
 struct Node {
   int node_index;
-  int count; // do we actually need this?
   double mindist;
   double minmaxdist;
   double minX;
@@ -265,26 +264,29 @@ void sortBranchList(struct Node* branchList, int length){
 
 // implement downward puring
 int DownwardPuring (struct Node node, struct Point poi, struct Rect nearest, struct Node* branchList, int length) {
-  int i, last;
+  int i, last, j;
   last = 0;
   double min_minmaxdist;
   min_minmaxdist = branchList[0].minmaxdist;
   //printf("%f\n", min_minmaxdist);
-  for(i=0; i<length; i++) {
-    if(branchList[i+1].mindist <= min_minmaxdist) {
-      printf("keep %d\n", branchList[i+1].node_index);
-      if(branchList[i+1].minmaxdist < branchList[i].minmaxdist) {
-        min_minmaxdist = branchList[i+1].minmaxdist;
+  printf("length is: %d\n", length);
+  for(i=1; i<length; i++) {
+    if(branchList[i].mindist <= min_minmaxdist) {
+      printf("a) i is %d\n", i);
+      printf("keep %d\n", branchList[i].node_index);
+      if(branchList[i].minmaxdist < min_minmaxdist) {
+        min_minmaxdist = branchList[i].minmaxdist;
       }
-      last+=1;
     }
     else {
-      branchList[i].node_index = -1;
+      printf("i is: %d\n", i);
+      branchList[i].node_index = -2;
+      last = i;
       break;
     }
   }
-  for(i=last+1; i<length; i++) {
-    branchList[i].node_index = -1;
+  for(j=last+1; j<length; j++) {
+    branchList[j].node_index = -3;
   }
   return last;
 }
@@ -293,19 +295,20 @@ int DownwardPuring (struct Node node, struct Point poi, struct Rect nearest, str
 int UpwardPuring (struct Node node, struct Point poi, struct Rect nearest, struct Node* branchList, int length) {
   /* prune the branchlist by the third rule
     return: the number of available branches left */
-  int i, last;
+  int i, last, j;
   last = 0;
   double objectdist = objectDist(poi, nearest.minX, nearest.maxY);
   for(i=0; i<length; i++) {
     if(branchList[i].mindist <= objectdist) {
-      last+=1;
+      printf("upward prunning: found one branch\n");
     } else {
-      branchList[i].node_index = -1;
+      branchList[i].node_index = -4;
+      last = i;
       break;
     }
   }
-  for(i=last+1; i<length; i++) {
-    branchList[i].node_index = -1;
+  for(j=last+1; j<length; j++) {
+    branchList[j].node_index = -5;
   }
   return last;
 }
@@ -346,12 +349,13 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
 
   int numLeaves;
   numLeaves = leafCount(db, node);
+  printf("numLeaves: %d\n", numLeaves);
   if (numLeaves>0)
   {
+    printf("leaf node: %d\n", node.node_index);
     long children[numLeaves]; //int children[lrafCount] -> double children[leafCount] --> Fixed
     int numChildren = genChildrenObject(db, node, children);
     printf("numChildren: %d\n", numChildren);
-    printf("numLeaves: %d\n", numLeaves);
     double rect[4];
     /* Iterative through all children: swap if there is a closer children to the point */
     for (i = 0; i < numLeaves; ++i)
@@ -372,6 +376,7 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
     printf("id:%d minX:%f maxX:%f minY:%f maxY:%f dist:%f\n", nearest.id, nearest.minX, nearest.maxX, nearest.minY, nearest.maxY, nearest.dist);
 
   }else{
+    printf("%d\n", node.node_index);
     int length = genBranchList(db, poi, node, branchList);
     printf("generated ABL, length: %d\n", length);
     if (length==0)
@@ -392,9 +397,27 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
     printf("down pruning\n");
     printf("last is: %d\n", last);
 
-    for (j = 0; j <= last; ++j)
+
+    for (i = 0; i < length; ++i)
     {
-      newNode = branchList[i];
+      printf("%d\n", branchList[i].node_index);
+      printf("%f\n", branchList[i].mindist);
+      printf("%f\n", branchList[i].minmaxdist);
+      printf("\n");
+    }
+
+    printf("new: %d\n", branchList[0].node_index);
+
+    for (j = 0; j < last; ++j)
+    {
+      newNode.node_index = branchList[i].node_index;
+      newNode.minX = branchList[i].minX;
+      newNode.maxX = branchList[i].maxX;
+      newNode.minY = branchList[i].minY;
+      newNode.maxY = branchList[i].maxY;
+      newNode.mindist = branchList[i].mindist;
+      newNode.minmaxdist = branchList[i].minmaxdist;
+      printf("new node is: %d\n", newNode.node_index);
 
       //Recursively visit chile nodes
       nearestNeighborSearch(db, newNode, poi, nearest);
