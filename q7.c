@@ -21,7 +21,7 @@ struct Node {
 };
 
 struct Rect {
-  int id;
+  long id;
   double minX;
   double minY;
   double maxX;
@@ -269,24 +269,24 @@ int DownwardPuring (struct Node node, struct Point poi, struct Rect nearest, str
   double min_minmaxdist;
   min_minmaxdist = branchList[0].minmaxdist;
   //printf("%f\n", min_minmaxdist);
-  printf("length is: %d\n", length);
+  //printf("length is: %d\n", length);
   for(i=1; i<length; i++) {
     if(branchList[i].mindist <= min_minmaxdist) {
-      printf("a) i is %d\n", i);
-      printf("keep %d\n", branchList[i].node_index);
+      //printf("a) i is %d\n", i);
+      //printf("keep %d\n", branchList[i].node_index);
       if(branchList[i].minmaxdist < min_minmaxdist) {
         min_minmaxdist = branchList[i].minmaxdist;
       }
     }
     else {
-      printf("i is: %d\n", i);
-      branchList[i].node_index = -2;
+      //printf("i is: %d\n", i);
+      //branchList[i].node_index = -2;
       last = i;
       break;
     }
   }
   for(j=last+1; j<length; j++) {
-    branchList[j].node_index = -3;
+    //branchList[j].node_index = -3;
   }
   return last;
 }
@@ -297,18 +297,15 @@ int UpwardPuring (struct Node node, struct Point poi, struct Rect nearest, struc
     return: the number of available branches left */
   int i, last, j;
   last = 0;
-  double objectdist = objectDist(poi, nearest.minX, nearest.maxY);
+  printf("minX: %f\n", nearest.minX);
+  printf("minY: %f\n", nearest.minY);
+  //double objectdist = objectDist(poi, nearest.minX, nearest.maxY);
+  printf("objectdist: %f\n", nearest.dist);
   for(i=0; i<length; i++) {
-    if(branchList[i].mindist <= objectdist) {
-      printf("upward prunning: found one branch\n");
-    } else {
-      branchList[i].node_index = -4;
+    if(branchList[i].mindist > nearest.dist) {
       last = i;
       break;
     }
-  }
-  for(j=last+1; j<length; j++) {
-    branchList[j].node_index = -5;
   }
   return last;
 }
@@ -343,20 +340,25 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
   //struct Point poi;
   struct Node newNode;
   struct Node branchList[200];
-  int dist;
+  double dist;
   int last;
   int i,j;
 
   int numLeaves;
   numLeaves = leafCount(db, node);
-  printf("numLeaves: %d\n", numLeaves);
   if (numLeaves>0)
   {
-    printf("leaf node: %d\n", node.node_index);
-    long children[numLeaves]; //int children[lrafCount] -> double children[leafCount] --> Fixed
+    printf("now found a leaf node: %d\n", node.node_index);
+    printf("num of leaves/objects: %d\n", numLeaves);
+    long children[numLeaves];
     int numChildren = genChildrenObject(db, node, children);
-    printf("numChildren: %d\n", numChildren);
+    //printf("numChildren: %d\n", numChildren);
     double rect[4];
+    if(nearest.id==0){
+      nearest.id = children[0];
+      getRect(db, children[0], rect);
+      nearest.dist = objectDist(poi, rect[0], rect[3]);
+    }
     /* Iterative through all children: swap if there is a closer children to the point */
     for (i = 0; i < numLeaves; ++i)
     {
@@ -370,60 +372,69 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
         nearest.minY = rect[2];
         nearest.maxY = rect[3];
         nearest.dist = dist;
+        printf("found one possible nearest: id:%ld minX:%f maxX:%f minY:%f maxY:%f dist:%f\n", nearest.id, nearest.minX, nearest.maxX, nearest.minY, nearest.maxY, nearest.dist);
       }
+    printf("nearest: %ld\n", nearest.id);
     }
-    // TODO: print out the result
-    printf("id:%d minX:%f maxX:%f minY:%f maxY:%f dist:%f\n", nearest.id, nearest.minX, nearest.maxX, nearest.minY, nearest.maxY, nearest.dist);
-
+    
   }else{
-    printf("%d\n", node.node_index);
+    printf("The non-leaf node is: %d\n", node.node_index);
     int length = genBranchList(db, poi, node, branchList);
     printf("generated ABL, length: %d\n", length);
-    if (length==0)
-    {
-      return;
-    }
+    //if (length==0)
+    //{
+      //return;
+    //}
     sortBranchList(branchList, length);
     printf("sorted ABL based on mindist\n");
+    /*
     for (i = 0; i < length; ++i)
     {
       printf("%d\n", branchList[i].node_index);
       printf("%f\n", branchList[i].mindist);
       printf("%f\n", branchList[i].minmaxdist);
       printf("\n");
-    }
+    }*/
+
     //Perform Downward Pruning 
     last = DownwardPuring(node, poi, nearest, branchList, length); //this will require dynamically change the branchlist how??????????????
-    printf("down pruning\n");
-    printf("last is: %d\n", last);
+    printf("down pruned, now has %d possible branches\n", last);
+    //printf("last is: %d\n", last);
 
-
+    /*
     for (i = 0; i < length; ++i)
     {
       printf("%d\n", branchList[i].node_index);
       printf("%f\n", branchList[i].mindist);
       printf("%f\n", branchList[i].minmaxdist);
       printf("\n");
-    }
+    }*/
 
-    printf("new: %d\n", branchList[0].node_index);
+    //printf("new: %d\n", branchList[0].node_index);
 
     for (j = 0; j < last; ++j)
     {
-      newNode.node_index = branchList[i].node_index;
-      newNode.minX = branchList[i].minX;
-      newNode.maxX = branchList[i].maxX;
-      newNode.minY = branchList[i].minY;
-      newNode.maxY = branchList[i].maxY;
-      newNode.mindist = branchList[i].mindist;
-      newNode.minmaxdist = branchList[i].minmaxdist;
+      //printf("j: %d\n", j);
+      //printf("last: %d\n", last);
+      newNode.node_index = branchList[j].node_index;
+      newNode.minX = branchList[j].minX;
+      newNode.maxX = branchList[j].maxX;
+      newNode.minY = branchList[j].minY;
+      newNode.maxY = branchList[j].maxY;
+      newNode.mindist = branchList[j].mindist;
+      newNode.minmaxdist = branchList[j].minmaxdist;
       printf("new node is: %d\n", newNode.node_index);
 
-      //Recursively visit chile nodes
+      //Recursively visit chile 
+      printf("entering a new recursion\n");
       nearestNeighborSearch(db, newNode, poi, nearest);
 
       //Perform Upward Pruning???????????????????????????????????????????????
+      printf("node: %d\n", node.node_index);
+      printf("nearest: %ld\n", nearest.id);
+      printf("length: %d\n", length);
       last = UpwardPuring(node, poi, nearest, branchList, length);
+      printf("up pruned, now has %d possible branches\n", last);
     }
 
   }
@@ -467,7 +478,8 @@ int main(int argc, char **argv){
   poi.y = atof(y);
   //poi = *(struct Point *)malloc(sizeof(struct Point));
   node = *(struct Node *)malloc(sizeof(struct Node));
-  nearest = *(struct Rect *)malloc(sizeof(struct Rect));/// zhe shi gan ma???????????????????????
+  //nearest = *(struct Rect *)malloc(sizeof(struct Rect));
+  nearest.id = 0;
 
   struct Node testNode1;
   testNode1.node_index = 1;
