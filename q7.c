@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sqlite3.h>
 #include <string.h>
+#include <math.h>
 
 //http://stackoverflow.com/questions/3437404/min-and-max-in-c
 //#define MIN(a,b) ((a) > (b) ? a : b)
@@ -119,10 +120,10 @@ double minMaxDist(struct Node node, struct Point p) {
 }
 
 
-double objectDist(struct Point poi, double minX, double maxX, double minY, double maxY){
+double objectDist(struct Point poi, double minX, double maxY){
   /* TODO: compute the distance between point poi and the rect*/
   double dist=0;
-
+  dist = sqrt(square(poi.x-minX) + square(poi.y-maxY));
   return dist;
 }
 
@@ -262,18 +263,8 @@ void sortBranchList(struct Node* branchList, int length){
   qsort(branchList, length, sizeof(struct Node), cmpfunc); 
 }
 
-int pruneBranchList(sqlite3 *db, struct Node node, struct Point poi, struct Rect nearest, struct Node* branchList){
-  /* TODO */
-  int last = 0;
-
-  /*MBRs with the lowest mindist should be left(Could have more than 1 left)*/
-
-  /**/
-
-  return last;
-}
-
-int DownwardPuring (struct Node node, struct Point poi, struct Rect Nearest, struct Node* branchList, int length) {
+// implement downward puring
+int DownwardPuring (struct Node node, struct Point poi, struct Rect nearest, struct Node* branchList, int length) {
   int i, last;
   last = 0;
   double min_minmaxdist;
@@ -283,15 +274,40 @@ int DownwardPuring (struct Node node, struct Point poi, struct Rect Nearest, str
       if(branchList[i+1].minmaxdist < branchList[i].minmaxdist) {
         min_minmaxdist = branchList[i+1].minmaxdist;
       }
-      last++;
+      last+=1;
     }
     else {
-      branchList[i].node_index = 0;
+      branchList[i].node_index = -1;
       break;
     }
   }
+  for(i=last+1; i<length; i++) {
+    branchList[i].node_index = -1;
+  }
   return last;
 }
+
+//implemnent upward puring
+int UpwardPuring (struct Node node, struct Point poi, struct Rect nearest, struct Node* branchList, int length) {
+  /* prune the branchlist by the third rule
+    return: the number of available branches left */
+  int i, last;
+  last = 0;
+  double objectdist = objectDist(poi, nearest.minX, nearest.maxY);
+  for(i=0; i<length; i++) {
+    if(branchList[i].mindist < objectdist) {
+      last+=1;
+    } else {
+      branchList[i].node_index = -1;
+      break;
+    }
+  }
+  for(i=last+1; i<length; i++) {
+    branchList[i].node_index = -1;
+  }
+  return last;
+}
+
 
 int leafCount(sqlite3 *db, struct Node node){
   /* Return the # of children of a leaf node. 
@@ -332,19 +348,14 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
   {
     long children[numLeaves]; //int children[lrafCount] -> double children[leafCount] --> Fixed
     int numChildren = genChildrenObject(db, node, children);
-    
-    /* Init: start with the first children */
-    struct Rect nearest;
-    nearest.id = children[0];//init
-    double rect[4];  //assign 4 elements to rect???? --> Fixed
-    getRect(db, children[0], rect); // fill the rect array
-    nearest.dist = objectDist(poi, rect[0], rect[1], rect[2], rect[3]);
-    
+    printf("numChildren: %d\n", numChildren);
+    printf("numLeaves: %d\n", numLeaves);
+    double rect[4];
     /* Iterative through all children: swap if there is a closer children to the point */
-    for (i = 1; i < numLeaves; ++i)
+    for (i = 0; i < numLeaves; ++i)
     {
       getRect(db, children[i], rect);
-      dist = objectDist(poi, rect[0], rect[1], rect[2], rect[3]);
+      dist = objectDist(poi, rect[0], rect[3]);
       if (dist<nearest.dist)
       {
         nearest.id = children[i]; 
@@ -362,9 +373,9 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
     int length = genBranchList(db, poi, node, branchList);
     sortBranchList(branchList, length);
     //Perform Downward Pruning ???????????????????????????????????????????????
-    last = pruneBranchList(db, node, poi, nearest, branchList); //this will require dynamically change the branchlist how??????????????
+    last = DownwardPuring(node, poi, nearest, branchList, length); //this will require dynamically change the branchlist how??????????????
 
-    for (i = 0; i < last; ++i)
+    for (j = 0; j < last; ++j)
     {
       newNode = branchList[i];
 
@@ -372,7 +383,7 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
       nearestNeighborSearch(db, newNode, poi, nearest);
 
       //Perform Upward Pruning???????????????????????????????????????????????
-      last = pruneBranchList(db, node, poi, nearest, branchList);
+      last = UpwardPuring(node, poi, nearest, branchList, length);
     }
 
   }
@@ -414,7 +425,7 @@ int main(int argc, char **argv){
   //printf("%f\n", atof(x));
   poi.x = atof(x);
   poi.y = atof(y);
-  poi = *(struct Point *)malloc(sizeof(struct Point));
+  //poi = *(struct Point *)malloc(sizeof(struct Point));
   node = *(struct Node *)malloc(sizeof(struct Node));
   nearest = *(struct Rect *)malloc(sizeof(struct Rect));/// zhe shi gan ma???????????????????????
 
@@ -426,6 +437,7 @@ int main(int argc, char **argv){
   */
 
   /* min dist: not OK, may need to calibrate */
+/*
   struct Point testPoi;
   testPoi.x = 9.898; // 0 won't work --> case5&6 have problem
   testPoi.y = 446;
@@ -462,7 +474,7 @@ int main(int argc, char **argv){
   testNode890.maxY = 629.767;
   testNode890.mindist = minDist(testNode890, testPoi);
   testNode890.minmaxdist = minMaxDist(testNode890, testPoi);
-  //printf("%f\n", testNode1472.mindist);*/
+  //printf("%f\n", testNode1472.mindist);
 
   printf("test for test53, a leaf node\n");
   //53 620.96 627.419 411.67 502.449 A leaf node
@@ -474,12 +486,14 @@ int main(int argc, char **argv){
   testNode53.maxY = 502.449;
   testNode53.mindist = minDist(testNode53, testPoi);
   testNode53.minmaxdist = minMaxDist(testNode53, testPoi);
+*/
 
 /* extractNodes: OK*/
   //char nodeString[] = "{1101 2.74727 575.684 5.34161 994.443} {1100 526.545 997.596 4.84267 994.657}";//// cannot use char*???
   //char nodeString[] = "{146 2.75355 90.1406 359.665 480.358} {652 3.01694 437.572 524.205 709.73} {43 2.97623 312.291 5.576 386.872} {1099 90.3024 193.208 398.932 510.586} {219 95.5809 430.375 468.996 579.271} {802 116.597 149.479 374.843 400.528} {1085 149.113 260.103 367.148 509.154} {1057 250.55 320.57 369.577 509.633} {892 302.808 425.133 8.78182 234.717} {519 316.861 411.414 374.148 509.966} {274 385.343 442.121 7.02256 276.013} {812 402.164 526.629 227.145 265.49} {590 396.143 553.229 260.617 310.096} {783 405.72 487.73 372.001 510.997} {300 408.413 487.749 301.7 341.671} {959 434.862 560.883 5.34161 149.199} {633 436.161 575.684 608.962 985.94} {758 438.37 528.135 560.579 745.281} {382 430.2 525.865 502.837 561.902} {430 470.624 570.692 361.295 429.932} {406 483.626 526.757 302.32 391.654} {1125 148.166 154.519 398.732 432.215} {1180 408.84 484.389 331.887 391.472} {1245 284.246 409.954 235.74 373.258} {1357 440.719 559.541 148.646 233.403} {1472 2.74727 474.458 681.342 994.443} {1564 469.916 569.906 432.828 510.025}";
   //int length = extractNodes(nodeString, testBranchList);
 /* genBranchList: OK*/ 
+  /*
   struct Node testBranchList[200];
   int length = genBranchList(db, testPoi, testNode1101, testBranchList);
   printf("length of the testBranchList: %d\n", length);
@@ -509,7 +523,7 @@ int main(int argc, char **argv){
     printf("%f\n", testBranchList[i].minmaxdist);
     printf("\n");
   }
-
+*/
 /* genChildrenObject: OK */
   /*
   long children[50]; // could we use other forms? just wondering
@@ -520,7 +534,7 @@ int main(int argc, char **argv){
     printf("%ld\n", children[i]);
   }
 */
-  //nearestNeighborSearch(db, node, poi, nearest);
+  nearestNeighborSearch(db, node, poi, nearest);
 
   sqlite3_close(db);
 }
