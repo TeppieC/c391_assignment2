@@ -3,12 +3,15 @@
 #include <sqlite3.h>
 #include <string.h>
 
-#define MIN(a,b) ((a) > (b) ? a : b)
-#define MAX(a,b) ((a) < (b) ? a : b) 
+//http://stackoverflow.com/questions/3437404/min-and-max-in-c
+//#define MIN(a,b) ((a) > (b) ? a : b)
+//#define MAX(a,b) ((a) < (b) ? a : b) 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 struct Node {
   int node_index;
-  int count;
+  int count; // do we actually need this?
   double mindist;
   double minmaxdist;
   double minX;
@@ -43,6 +46,7 @@ double minDist (struct Node node, struct Point p) {
   // if the point is inside the mbr 
   if(p.x >= node.minX && p.x <= node.maxX && p.y >= node.minY && p.y <= node.maxY) {
     mindist = 0;
+    printf("case0: %f\n", mindist);
   }
   // if the point is outside mbr
   else {
@@ -50,29 +54,36 @@ double minDist (struct Node node, struct Point p) {
     if(p.y < node.maxY && p.y > node.minY) {
       if(p.x > node.maxX) {
         mindist = sqrt(p.x - node.maxX);
+        printf("case1: %f\n", mindist);
       }
       else if(p.x < node.minX) {
         mindist = sqrt(node.minX - p.x);
+        printf("case2: %f\n", mindist);
       }
     } 
     if(p.x > node.minX && p.x < node.maxX) {
       if(p.y > node.maxY) {
         mindist = sqrt(p.y - node.maxY);
+        printf("case3: %f\n", mindist);
       }
       else if(p.y < node.minY) {
         mindist = sqrt(node.minY - p.y);
+        printf("case4: %f\n", mindist);
       }
       //mindist = MIN((p.y-node.maxY)*(p.y-node.maxY), (p.y-node.minY)*(p.y-node.minY));
     }
     else {
       if(p.x > node.maxX) {
         mindist  = MIN(sqrt(p.y-node.maxY)+sqrt(p.x-node.maxX), sqrt(p.y-node.minY)+sqrt(p.x-node.minX));
+        printf("case5: %f\n", mindist);
       }
       if(p.x < node.minX) {
         mindist = MIN(sqrt(p.y-node.maxY)+sqrt(p.x-node.minX), sqrt(p.y-node.minY)+sqrt(p.x-node.minX));
+        printf("case6: %f\n", mindist);
       }
     }
   }
+  printf("mindist is: %f\n", mindist);
   return mindist;
 }
 
@@ -224,10 +235,14 @@ int pruneBranchList(sqlite3 *db, struct Node node, struct Point poi, struct Rect
   /* TODO */
   int last = 0;
 
+  /*MBRs with the lowest mindist should be left(Could have more than 1 left)*/
+
+  /**/
+
   return last;
 }
 
-int LeafCount(sqlite3 *db, struct Node node){
+int leafCount(sqlite3 *db, struct Node node){
   /* Return the # of children of a leaf node. 
     If it is not a leaf node, return 0 instead. */
 
@@ -261,11 +276,11 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
   int last;
   int i,j;
 
-  int leafCount;
-  leafCount = LeafCount(db, node);
-  if (leafCount>0)
+  int numLeaves;
+  numLeaves = leafCount(db, node);
+  if (numLeaves>0)
   {
-    int children[leafCount]; //int children[lrafCount] -> double children[leafCount]
+    int children[numLeaves]; //int children[lrafCount] -> double children[leafCount]
     genChildrenObject(db, node, children);
     
     struct Rect nearest;
@@ -276,7 +291,7 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
       rect[i] = (double)children[j];
     }
     nearest.dist = objectDist(poi, rect[0], rect[1], rect[2], rect[3]);
-    for (i = 0; i < leafCount; ++i)
+    for (i = 0; i < numLeaves; ++i)
     {
       //rect[4] = getRect(db, children[i]);//////////////////////////
       getRect(db, children[i]);
@@ -292,6 +307,9 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
         nearest.dist = dist;
       }
     }
+    // TODO: print out the result
+    printf("id:%d minX:%f maxX:%f minY:%f maxY:%f dist:%f\n", nearest.id, nearest.minX, nearest.maxX, nearest.minY, nearest.maxY, nearest.dist);
+
   }else{
     genBranchList(db, poi, node, branchList);
     sortBranchList(branchList);
@@ -333,9 +351,9 @@ int main(int argc, char **argv){
   }
 
   // deal with the parameters
-  char *x1 = argv[2];
-  char *y1 = argv[3];
-  printf("Querying for the point (%s, %s)\n", x1,y1);
+  char *x = argv[2];
+  char *y = argv[3];
+  printf("Querying for the point (%s, %s)\n", x,y);
 
 
   /******** C program for NN searching algorithm ******************/
@@ -343,13 +361,59 @@ int main(int argc, char **argv){
   struct Node node;
   struct Rect nearest;
 
-  poi.x = atoi(x1);
-  poi.y = atoi(y1);
+  //printf("%f\n", atof(x));
+  poi.x = atof(x);
+  poi.y = atof(y);
   poi = *(struct Point *)malloc(sizeof(struct Point));
   node = *(struct Node *)malloc(sizeof(struct Node));
   nearest = *(struct Rect *)malloc(sizeof(struct Rect));/// zhe shi gan ma???????????????????????
 
-  nearestNeighborSearch(db, node, poi, nearest);
+  /* leaf count: OK
+  struct Node testNode;
+  testNode.node_index = 1683;
+  int count = leafCount(db, testNode);
+  printf("%d\n", count);
+  */
+
+  /* min dist: not OK, may need to calibrate */
+  struct Point testPoi;
+  testPoi.x = 9.898; // 0 won't work --> case5&6 have problem
+  testPoi.y = 446;
+  printf("test poi is: %f, %f\n", testPoi.x, testPoi.y);
+
+  printf("test for test1101\n");
+  struct Node testNode1101;
+  testNode1101.node_index = 1101;
+  testNode1101.minX = 2.74727;
+  testNode1101.maxX = 575.684;
+  testNode1101.minY = 5.34161;
+  testNode1101.maxY = 994.443;
+  testNode1101.mindist = minDist(testNode1101, testPoi);
+  //printf("%f\n", testNode1101.mindist);
+
+  printf("test for test1472\n");
+  struct Node testNode1472;
+  testNode1472.node_index = 1472;
+  testNode1472.minX = 2.74727;
+  testNode1472.maxX = 474.458;
+  testNode1472.minY = 681.342;
+  testNode1472.maxY = 994.443;
+  testNode1472.mindist = minDist(testNode1472, testPoi);
+
+  printf("test for test890\n");
+  struct Node testNode890;
+  testNode890.node_index = 890;
+  testNode890.minX = 602.46;
+  testNode890.maxX = 654.178;
+  testNode890.minY = 484.865;
+  testNode890.maxY = 629.767;
+  testNode890.mindist = minDist(testNode890, testPoi);
+  //printf("%f\n", testNode1472.mindist);
+  struct Node testBranchList[200];
+  //genBranchList(db, testPoi, testNode1101, testBranchList)
+
+
+  //nearestNeighborSearch(db, node, poi, nearest);
 
   sqlite3_close(db);
 }
