@@ -95,50 +95,51 @@ double minMaxDist(struct Node node, struct Point p){
 
 double objectDist(struct Point poi, double minX, double maxX, double minY, double maxY){
   /* TODO: compute the distance between point poi and the rect*/
-  int dist=0;
+  double dist=0;
 
   return dist;
 }
 
-//struct Node *extractNodes(char *nodeString, struct Node *branchList){
-void extractNodes(char *nodeString, struct Node *branchList){
+int extractNodes(char *nodeString, struct Node *branchList){
   const char s[2] = " ";
   char *token;
-  char* result[300];
+  char** result = (char**) malloc(300*sizeof(char*));
 
   int i = 0;
+  //printf("heheh\n");
   token = strtok(nodeString, s);
+  //printf("ha\n");
   while(token != NULL){
 
     if (token[0] == '{'){
       memmove(token, token+1, strlen(token));
     }
-    printf("%s\n", token);
+    //printf("%s\n", token);
 
     result[i] = token;
     token = strtok(NULL, s);
     i+=1;
   }
+  //printf("hey\n");
 
   int j=0;
   int n=0;
   for(j=0;j<i;j+=5){
-    branchList[n].node_index = *result[j];//may need to cast--> atoi()
-    branchList[n].node_index = *result[j+1];//may need to cast--> double()
-    branchList[n].node_index = *result[j+2];
-    branchList[n].node_index = *result[j+3];
-    branchList[n].node_index = *result[j+4];
+    branchList[n].node_index = atoi(result[j]);
+    branchList[n].minX = atof(result[j+1]);
+    branchList[n].maxX = atof(result[j+2]);
+    branchList[n].minY = atof(result[j+3]);
+    /* deal with the last string, to remove the last '}' character */
+    char *end = result[j+4];
+    end[strlen(end)-1]=0;
+    branchList[n].maxY = atof(end);
     n+=1;
   }
+  free(result);
+  return n;
 }
 
-int lengthOfList(struct Node* branchList){//?????????????????????????????????????????????????????????????????????????????????????????????
-  /* Return the length of a branchList */
-  int length = sizeof(branchList)/sizeof(struct Node);//aquiring the length of the branchList
-  return length;
-}
-
-void genBranchList(sqlite3 *db, struct Point p, struct Node node, struct Node* branchList){
+int genBranchList(sqlite3 *db, struct Point p, struct Node node, struct Node* branchList){
   int rc;
   sqlite3_stmt *stmt;
 
@@ -148,25 +149,26 @@ void genBranchList(sqlite3 *db, struct Point p, struct Node node, struct Node* b
   
   sqlite3_bind_int(stmt, 1, node.node_index);
 
+  int length = 0;
   //print_result(stmt);
   while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
     printf("%s", sqlite3_column_text(stmt, 0));
     char *result = (char *)sqlite3_column_text(stmt, 0); // parse from the query result
-    extractNodes(result, branchList);// extract the result into the branchList
+    length = extractNodes(result, branchList);// extract the result into the branchList
     printf("\n");
   }
 
   int i=0;
-
-  int length = lengthOfList(branchList);
+  //int length = lengthOfList(branchList);
   for(i=0;i<length;i++){    // parameter: branchList[i] is a Node struct, p is a Point struct
     branchList[i].mindist = minDist(branchList[i], p);
   }
+
+  return length;
 }
 
-void genChildrenObject(sqlite3 *db, struct Node node, int* children){
+int genChildrenObject(sqlite3 *db, struct Node node, long* children){
   /* Return the id's of the children of a leaf node */
-
   int rc;
   sqlite3_stmt *stmt;
   //int* children; ////////
@@ -180,20 +182,23 @@ void genChildrenObject(sqlite3 *db, struct Node node, int* children){
   //print_result(stmt);
   int i = 0;
   while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-    printf("%s", sqlite3_column_text(stmt, 0));
-    char *result = (char *)sqlite3_column_text(stmt, 0); // parse from the query result
-    children[i] = atoi(result); /////////////////////////// is it okay??????
+    printf("%s\n", sqlite3_column_text(stmt, 0));
+    char* result = (char *)sqlite3_column_text(stmt, 0); // parse from the query result
+    //printf("%ld\n", strtol(result, &ptr, 10));
+    char *ptr;
+    children[i] = strtol(result, &ptr, 10); 
+    //printf("%s\n", result);
+    //printf("%ld\n", children[i]);
     i+=1;
-    printf("\n");
   }
+  return i;
 }
 
-void getRect(sqlite3 *db, int rectId){
+void getRect(sqlite3 *db, int rectId, double* rect){
   /* Query for the coordinates given the id of a rectangle */
 
   int rc;
   sqlite3_stmt *stmt;
-  double rect[4];////////////////////////////???????????????????????????
 
   char *sql_stmt = "SELECT start_X, end_X, start_Y, end_Y FROM rtree_index WHERE id=?";
   rc = sqlite3_prepare_v2(db, sql_stmt, -1, &stmt, 0);
@@ -280,26 +285,24 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
   numLeaves = leafCount(db, node);
   if (numLeaves>0)
   {
-    int children[numLeaves]; //int children[lrafCount] -> double children[leafCount]
-    genChildrenObject(db, node, children);
+    long children[numLeaves]; //int children[lrafCount] -> double children[leafCount] --> Fixed
+    int numChildren = genChildrenObject(db, node, children);
     
+    /* Init: start with the first children */
     struct Rect nearest;
     nearest.id = children[0];//init
-    double rect[4];  //assign 4 elements to rect????
-    getRect(db, children[i]); // where i comes from with no inital value??????? and never increase????
-    for(j=0; j<4; j++) {
-      rect[i] = (double)children[j];
-    }
+    double rect[4];  //assign 4 elements to rect???? --> Fixed
+    getRect(db, children[0], rect); // fill the rect array
     nearest.dist = objectDist(poi, rect[0], rect[1], rect[2], rect[3]);
-    for (i = 0; i < numLeaves; ++i)
+    
+    /* Iterative through all children: swap if there is a closer children to the point */
+    for (i = 1; i < numLeaves; ++i)
     {
-      //rect[4] = getRect(db, children[i]);//////////////////////////
-      getRect(db, children[i]);
-      rect[i] = (double)children[i];
+      getRect(db, children[i], rect);
       dist = objectDist(poi, rect[0], rect[1], rect[2], rect[3]);
       if (dist<nearest.dist)
       {
-        nearest.id = children[i];
+        nearest.id = children[i]; 
         nearest.minX = rect[0];
         nearest.maxX = rect[1];
         nearest.minY = rect[2];
@@ -334,7 +337,9 @@ int main(int argc, char **argv){
   sqlite3 *db;
   sqlite3_stmt *stmt;
   char *zErrMsg = 0;
-  int rc;
+  int rc;  
+  int i;
+
 
   // check the arguments
   if( argc!=4 ){
@@ -408,10 +413,45 @@ int main(int argc, char **argv){
   testNode890.minY = 484.865;
   testNode890.maxY = 629.767;
   testNode890.mindist = minDist(testNode890, testPoi);
-  //printf("%f\n", testNode1472.mindist);
-  struct Node testBranchList[200];
-  //genBranchList(db, testPoi, testNode1101, testBranchList)
+  //printf("%f\n", testNode1472.mindist);*/
 
+  printf("test for test53, a leaf node\n");
+  //53 620.96 627.419 411.67 502.449 A leaf node
+  struct Node testNode53;
+  testNode53.node_index = 53;
+  testNode53.minX = 602.96;
+  testNode53.maxX = 627.419;
+  testNode53.minY = 411.67;
+  testNode53.maxY = 502.449;
+  testNode53.mindist = minDist(testNode53, testPoi);
+
+/* extractNodes: OK*/
+  //char nodeString[] = "{1101 2.74727 575.684 5.34161 994.443} {1100 526.545 997.596 4.84267 994.657}";//// cannot use char*???
+  //char nodeString[] = "{146 2.75355 90.1406 359.665 480.358} {652 3.01694 437.572 524.205 709.73} {43 2.97623 312.291 5.576 386.872} {1099 90.3024 193.208 398.932 510.586} {219 95.5809 430.375 468.996 579.271} {802 116.597 149.479 374.843 400.528} {1085 149.113 260.103 367.148 509.154} {1057 250.55 320.57 369.577 509.633} {892 302.808 425.133 8.78182 234.717} {519 316.861 411.414 374.148 509.966} {274 385.343 442.121 7.02256 276.013} {812 402.164 526.629 227.145 265.49} {590 396.143 553.229 260.617 310.096} {783 405.72 487.73 372.001 510.997} {300 408.413 487.749 301.7 341.671} {959 434.862 560.883 5.34161 149.199} {633 436.161 575.684 608.962 985.94} {758 438.37 528.135 560.579 745.281} {382 430.2 525.865 502.837 561.902} {430 470.624 570.692 361.295 429.932} {406 483.626 526.757 302.32 391.654} {1125 148.166 154.519 398.732 432.215} {1180 408.84 484.389 331.887 391.472} {1245 284.246 409.954 235.74 373.258} {1357 440.719 559.541 148.646 233.403} {1472 2.74727 474.458 681.342 994.443} {1564 469.916 569.906 432.828 510.025}";
+  //int length = extractNodes(nodeString, testBranchList);
+/* genBranchList: OK*/ /*
+  struct Node testBranchList[200];
+  int length = genBranchList(db, testPoi, testNode1101, testBranchList);
+  printf("length of the testBranchList: %d\n", length);
+  sortBranchList(genBranchList);
+  for (i = 0; i < length; ++i)
+  {
+    printf("%d\n", testBranchList[i].node_index);
+    printf("%f\n", testBranchList[i].minX);
+    printf("%f\n", testBranchList[i].maxX);
+    printf("%f\n", testBranchList[i].minY);
+    printf("%f\n", testBranchList[i].maxY);
+  }*/
+
+/* genChildrenObject: OK */
+  long children[50]; // could we use other forms? just wondering
+  int numChildrenObjects = genChildrenObject(db, testNode53, children); //max:39
+  printf("%d\n", numChildrenObjects);
+  for (i = 0; i < numChildrenObjects; ++i)
+  {
+    /* code */
+    printf("%ld\n", children[i]);
+  }
 
   //nearestNeighborSearch(db, node, poi, nearest);
 
