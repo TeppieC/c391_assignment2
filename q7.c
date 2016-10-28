@@ -34,11 +34,10 @@ struct Point {
   double y;
 };
 
-
-double sqrt(double a) {
+// self-defined square function
+double square (double a) {
   return a * a;
 }
-
 
 // calculate the minimal distance from the point to the mbr
 double minDist (struct Node node, struct Point p) {
@@ -46,52 +45,79 @@ double minDist (struct Node node, struct Point p) {
   // if the point is inside the mbr 
   if(p.x >= node.minX && p.x <= node.maxX && p.y >= node.minY && p.y <= node.maxY) {
     mindist = 0;
-    printf("case0: %f\n", mindist);
   }
   // if the point is outside mbr
   else {
     // if the point is within range 
     if(p.y < node.maxY && p.y > node.minY) {
       if(p.x > node.maxX) {
-        mindist = sqrt(p.x - node.maxX);
-        printf("case1: %f\n", mindist);
+        mindist = square(p.x - node.maxX);
       }
       else if(p.x < node.minX) {
-        mindist = sqrt(node.minX - p.x);
-        printf("case2: %f\n", mindist);
+        mindist = square(node.minX - p.x);
       }
     } 
-    if(p.x > node.minX && p.x < node.maxX) {
+    else if(p.x > node.minX && p.x < node.maxX) {
       if(p.y > node.maxY) {
-        mindist = sqrt(p.y - node.maxY);
-        printf("case3: %f\n", mindist);
+        mindist = square(p.y - node.maxY);
       }
       else if(p.y < node.minY) {
-        mindist = sqrt(node.minY - p.y);
-        printf("case4: %f\n", mindist);
+        mindist = square(node.minY - p.y);
       }
       //mindist = MIN((p.y-node.maxY)*(p.y-node.maxY), (p.y-node.minY)*(p.y-node.minY));
     }
     else {
       if(p.x > node.maxX) {
-        mindist  = MIN(sqrt(p.y-node.maxY)+sqrt(p.x-node.maxX), sqrt(p.y-node.minY)+sqrt(p.x-node.minX));
-        printf("case5: %f\n", mindist);
+        mindist  = MIN(square(p.y-node.maxY)+square(p.x-node.maxX), square(p.y-node.minY)+square(p.x-node.maxX));
       }
-      if(p.x < node.minX) {
-        mindist = MIN(sqrt(p.y-node.maxY)+sqrt(p.x-node.minX), sqrt(p.y-node.minY)+sqrt(p.x-node.minX));
-        printf("case6: %f\n", mindist);
+      else if(p.x < node.minX) {
+        mindist = MIN(square(p.y-node.maxY)+square(p.x-node.minX), square(p.y-node.minY)+square(p.x-node.minX));
       }
     }
   }
-  printf("mindist is: %f\n", mindist);
   return mindist;
 }
 
-double minMaxDist(struct Node node, struct Point p){
+//calculate the minmax distance from a point to mbr
+double minMaxDist(struct Node node, struct Point p) {
   double minMaxDist;
-  /* TODO */
+  if(p.x > node.maxX) {
+    if(p.y > node.minY && p.y < node.maxY) {
+      minMaxDist = MAX(square(p.y-node.maxY)+square(p.x-node.maxX), square(p.y-node.minY)+square(p.x-node.maxX));
+    }
+    else {
+      if(p.y > node.maxY) {
+        minMaxDist = MIN(square(p.y-node.minY)+square(p.x-node.maxX), square(p.y-node.maxY)+square(p.x-node.minX));
+      }
+      else if(p.y < node.minY) {
+        minMaxDist = MIN(square(p.y-node.maxY)+square(p.x-node.maxX), square(p.y-node.minY)+square(p.x-node.minX));
+      }
+    }
+  }
+  else if(p.x < node.minX) {
+    if(p.y > node.minY && p.y < node.maxY) {
+      minMaxDist = MAX(square(p.y-node.maxY)+square(p.x-node.minX), square(p.y-node.minY)+square(p.x-node.minX));
+    }
+    else {
+      if(p.y > node.maxY) {
+        minMaxDist = MIN(square(p.y-node.minY)+square(p.x-node.minX), square(p.y-node.maxY)+square(p.x-node.maxX));
+      }
+      else if(p.y < node.minY) {
+        minMaxDist = MIN(square(p.y-node.maxY)+square(p.x-node.minX), square(p.y-node.minY)+square(p.x-node.maxX));
+      }
+    }
+  }
+  else {
+    if(p.y > node.maxY) {
+      minMaxDist = MAX(square(p.y-node.maxY)+square(p.x-node.minX), square(p.y-node.maxY)+square(p.x-node.maxX));
+    }
+    else {
+      minMaxDist = MAX(square(p.y-node.minY)+square(p.x-node.maxX), square(p.y-node.minY)+square(p.x-node.minX));
+    }
+  }
   return minMaxDist;
 }
+
 
 double objectDist(struct Point poi, double minX, double maxX, double minY, double maxY){
   /* TODO: compute the distance between point poi and the rect*/
