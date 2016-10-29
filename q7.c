@@ -5,8 +5,6 @@
 #include <math.h>
 
 //http://stackoverflow.com/questions/3437404/min-and-max-in-c
-//#define MIN(a,b) ((a) > (b) ? a : b)
-//#define MAX(a,b) ((a) < (b) ? a : b) 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
@@ -208,7 +206,7 @@ int genChildrenObject(sqlite3 *db, struct Node node, long* children){
   //print_result(stmt);
   int i = 0;
   while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-    printf("%s\n", sqlite3_column_text(stmt, 0));
+    //printf("%s\n", sqlite3_column_text(stmt, 0));
     char* result = (char *)sqlite3_column_text(stmt, 0); // parse from the query result
     //printf("%ld\n", strtol(result, &ptr, 10));
     char *ptr;
@@ -220,7 +218,7 @@ int genChildrenObject(sqlite3 *db, struct Node node, long* children){
   return i;
 }
 
-void getRect(sqlite3 *db, int rectId, double* rect){
+void getRect(sqlite3 *db, long rectId, double* rect){
   /* Query for the coordinates given the id of a rectangle */
 
   int rc;
@@ -228,7 +226,7 @@ void getRect(sqlite3 *db, int rectId, double* rect){
 
   char *sql_stmt = "SELECT start_X, end_X, start_Y, end_Y FROM rtree_index WHERE id=?";
   rc = sqlite3_prepare_v2(db, sql_stmt, -1, &stmt, 0);
-  sqlite3_bind_int(stmt, 1, rectId);
+  sqlite3_bind_int64(stmt, 1, rectId);
   
   int i = 0;
   while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
@@ -265,29 +263,22 @@ void sortBranchList(struct Node* branchList, int length){
 // implement downward puring
 int DownwardPruning (struct Node node, struct Point poi, struct Rect nearest, struct Node* branchList, int length) {
   int i, last, j;
-  last = 0;
+  last = length;
   double min_minmaxdist;
   min_minmaxdist = branchList[0].minmaxdist;
-  //printf("%f\n", min_minmaxdist);
-  //printf("length is: %d\n", length);
+
   for(i=1; i<length; i++) {
     if(branchList[i].mindist <= min_minmaxdist) {
-      //printf("a) i is %d\n", i);
-      //printf("keep %d\n", branchList[i].node_index);
       if(branchList[i].minmaxdist < min_minmaxdist) {
         min_minmaxdist = branchList[i].minmaxdist;
       }
     }
     else {
-      //printf("i is: %d\n", i);
-      //branchList[i].node_index = -2;
       last = i;
       break;
     }
   }
-  for(j=last+1; j<length; j++) {
-    //branchList[j].node_index = -3;
-  }
+
   return last;
 }
 
@@ -296,11 +287,8 @@ int UpwardPruning (struct Node node, struct Point poi, struct Rect nearest, stru
   /* prune the branchlist by the third rule
     return: the number of available branches left */
   int i, last, j;
-  last = 0;
-  //printf("minX: %f\n", nearest.minX);
-  //printf("minY: %f\n", nearest.minY);
-  //double objectdist = objectDist(poi, nearest.minX, nearest.maxY);
-  //printf("objectdist: %f\n", nearest.dist);
+  last = length;
+
   for(i=0; i<length; i++) {
     if(branchList[i].mindist > nearest.dist) {
       last = i;

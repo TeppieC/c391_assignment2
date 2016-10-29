@@ -8,8 +8,8 @@
   gcc -g q5.c sqlite3.c -lpthread -ldl -DSQLITE_ENABLE_RTREE=1
 ***/
 struct mbr {
-    int start_x;
-    int end_y;
+    double start_x;
+    double end_y;
     int length;
 };
 
