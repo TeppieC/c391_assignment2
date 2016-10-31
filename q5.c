@@ -42,7 +42,7 @@ int main(int argc, char **argv){
 	int length = atoi(argv[2]);
 
 	// generate the 100 bounding boxes
-	for (int i = 0; i < 100; ++i){
+	for (i = 0; i < 100; ++i){
 		// generate a random bounding box
 		mbr_list[i].start_x = (double)(rand()%1000); // x of the top-left
 		mbr_list[i].end_y = (double)(rand()%1000); // y of the top-left
@@ -167,7 +167,7 @@ int main(int argc, char **argv){
    	printf("Average runtime with r-tree: %f ms\n", rtree_total_time/20);
    	printf("Average runtime without r-tree: %f ms\n", index_total_time/20);
 
-    sqlite3_finalize(stmt2); //always finalize a statement
+    //sqlite3_finalize(stmt2); //always finalize a statement
 
   sqlite3_close(db);
 }
