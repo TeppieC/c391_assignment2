@@ -1,21 +1,23 @@
 Parameter l: 25 
-Average runtime with r-tree: 0.034775 ms
-Average runtime without r-tree: 8.744300 ms
+Average runtime with r-tree: 26.375100 ms
+Average runtime without r-tree: 1288.034900 ms
 
 Parameter l: 50 
-Average runtime with r-tree: 0.075625 ms
-Average runtime without r-tree: 8.992915 ms
+Average runtime with r-tree: 33.475100 ms
+Average runtime without r-tree: 1305.678900 ms
 
 Parameter l: 75 
-Average runtime with r-tree: 0.124079 ms
-Average runtime without r-tree: 8.688389 ms
+Average runtime with r-tree: 40.007750 ms
+Average runtime without r-tree: 1327.231850 ms
 
 Parameter l: 100 
-Average runtime with r-tree: 0.177105 ms
-Average runtime without r-tree: 8.783900 ms
+Average runtime with r-tree: 56.572300 ms
+Average runtime without r-tree: 1343.855700 ms
 
 Parameter l: 125 
-Average runtime with r-tree: 0.244767 ms
-Average runtime without r-tree: 8.908202 ms
+Average runtime with r-tree: 75.293150 ms
+Average runtime without r-tree: 1363.086950 ms
 
-The rtree is much faster than common index. There is no obvious difference among the different choices of length in common index approach. While there is difference in runtime when choosing difference length in rtree approach. The smaller length, the faster the query runs.
+The rtree is much faster than common index. Because when using rtree, it can ignore those nodes too far away, thus not have to search the whole table.
+There is no obvious difference among the different choices of length in common index approach. Because all of them need to search the whole table.
+While there is difference in runtime when choosing difference length in rtree approach. The smaller the length, the faster the query runs.
