@@ -116,44 +116,6 @@ double minMaxDist(struct Node node, struct Point p) {
   return minMaxDist;
 }
 
-double objectDistOld(struct Point p, double minX, double maxX, double minY, double maxY) {
-  double mindist;
-  // if the point is inside the mbr 
-  if(p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY) {
-    mindist = 0;
-  }
-  // if the point is outside mbr
-  else {
-    // if the point is within range 
-    if(p.y < maxY && p.y > minY) {
-      if(p.x > maxX) {
-        mindist = square(p.x - maxX);
-      }
-      else if(p.x < minX) {
-        mindist = square(minX - p.x);
-      }
-    } 
-    else if(p.x > minX && p.x < maxX) {
-      if(p.y > maxY) {
-        mindist = square(p.y - maxY);
-      }
-      else if(p.y < minY) {
-        mindist = square(minY - p.y);
-      }
-      //mindist = MIN((p.y-node.maxY)*(p.y-node.maxY), (p.y-node.minY)*(p.y-node.minY));
-    }
-    else {
-      if(p.x > maxX) {
-        mindist  = MIN(square(p.y-maxY)+square(p.x-maxX), square(p.y-minY)+square(p.x-maxX));
-      }
-      else if(p.x < minX) {
-        mindist = MIN(square(p.y-maxY)+square(p.x-minX), square(p.y-minY)+square(p.x-minX));
-      }
-    }
-  }
-  return sqrt(mindist);
-}
-
 double objectDist(struct Point poi, double minX, double maxY){
   /* TODO: compute the distance between point poi and the rect*/
   double dist=0;
