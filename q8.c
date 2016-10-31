@@ -228,15 +228,12 @@ void getRect(sqlite3 *db, long rectId, double* rect){
   rc = sqlite3_prepare_v2(db, sql_stmt, -1, &stmt, 0);
   sqlite3_bind_int64(stmt, 1, rectId);
   
-  int i = 0; ////
   while((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
     //printf("%s", sqlite3_column_text(stmt, 0));
     int col;
     for(col=0; col<sqlite3_column_count(stmt); col++) {
       rect[col] = atof((char *)sqlite3_column_text(stmt, col));
     }
-
-    i+=1; /////
   }
 }
 
