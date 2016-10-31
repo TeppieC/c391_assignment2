@@ -157,7 +157,8 @@ double objectDistOld(struct Point p, double minX, double maxX, double minY, doub
 double objectDist(struct Point poi, double minX, double maxY){
   /* TODO: compute the distance between point poi and the rect*/
   double dist=0;
-  dist = fabs(poi.x-minX) + fabs(poi.y-maxY);
+  //dist = fabs(poi.x-minX) + fabs(poi.y-maxY);
+  dist = sqrt(square(poi.x-minX) + square(poi.y-maxY));
   return dist;
 }
 
@@ -518,7 +519,7 @@ int main(int argc, char **argv){
   char *y = argv[3];
   char *k_str = argv[4];
   int k = atoi(k_str);
-  printf("Querying for the point (%s, %s), with the number of k: %d/n", x,y,k);
+  printf("Querying for the point (%s, %s), with the number of k: %d\n", x,y,k);
 
   /******** C program for NN searching algorithm ******************/
   struct Point poi;
