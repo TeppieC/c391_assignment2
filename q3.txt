@@ -1,6 +1,4 @@
-1|
-
-//which one to put as the answer?
+q3:
 
 1|1
 2|1
@@ -17,4 +15,4 @@
 13|1
 14|1
 
-Because in Q3, we didn't indicate the number of M and m when generating the indexes. Therefore, it automatically collect all objects under one single mbr. 
+Because in Q3, we didn't indicate the number of M and m when generating the indexes. Therefore, it automatically collects all objects under one single mbr. 

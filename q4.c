@@ -41,12 +41,6 @@ int main(int argc, char **argv){
                       AND p.id = r.id \
                       AND p.key='class' AND p.value=?;";
 
-    // Allocates storage
-    //char *sql = (char*)malloc(300 * sizeof(char));
-    // Prints "Hello world!" on hello_world
-    //sprintf(sql, sql_stmt, x1, x2, y1, y2, c);
-    //printf("%s\n", sql);
-
     rc = sqlite3_prepare_v2(db, sql_stmt, -1, &stmt, 0);
 
     if (rc != SQLITE_OK) {  
@@ -75,6 +69,5 @@ int main(int argc, char **argv){
     printf("%d rows found\n", count);
     sqlite3_finalize(stmt); //always finalize a statement
   
-    //free(sql);
     sqlite3_close(db);
 }

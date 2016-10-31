@@ -7,6 +7,7 @@
 /***
   gcc -g q5.c sqlite3.c -lpthread -ldl -DSQLITE_ENABLE_RTREE=1
 ***/
+
 struct mbr {
   double start_x;
   double end_y;
@@ -161,13 +162,9 @@ int main(int argc, char **argv){
 
   sqlite3_finalize(stmt2); //always finalize a statement
 
-
-
-    printf("Parameter l: %d \n", length);
-   	printf("Average runtime with r-tree: %f ms\n", rtree_total_time/20);
-   	printf("Average runtime without r-tree: %f ms\n", index_total_time/20);
-
-    //sqlite3_finalize(stmt2); //always finalize a statement
+  printf("Parameter l: %d \n", length);
+  printf("Average runtime with r-tree: %f ms\n", rtree_total_time/20);
+  printf("Average runtime without r-tree: %f ms\n", index_total_time/20);
 
   sqlite3_close(db);
 }
