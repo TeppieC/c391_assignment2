@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <sqlite3.h>
 #include <string.h>
+/***
+  gcc -g q4.c sqlite3.c -lpthread -ldl -DSQLITE_ENABLE_RTREE=1
 
+***/
 int main(int argc, char **argv){
 	sqlite3 *db; //the database
   sqlite3_stmt *stmt; //the update statement

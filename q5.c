@@ -6,6 +6,9 @@
 
 /***
   gcc -g q5.c sqlite3.c -lpthread -ldl -DSQLITE_ENABLE_RTREE=1
+
+  First create common sqlite indexes on the poi_cartesian table:
+    CREATE INDEX common_index ON poi_cartesian(end_y, start_x);
 ***/
 
 struct mbr {

@@ -40,4 +40,4 @@ Note:
 
 2. We used mindist matrix to sort the available branch list
 
-3. For q5, ...
+3. Please note for q5, you have to first create indexes using sql statements. See q5 for details.

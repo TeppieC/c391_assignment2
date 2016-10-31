@@ -276,7 +276,7 @@ int DownwardPruning (struct Node node, struct Point poi, struct Rect nearest, st
   min_minmaxdist = branchList[0].minmaxdist;
 
   /* if the minimal distance of a mbr m less than the minmax distance of another mbr m',
-    keep m in the branch list otherwise m should be discarded (strategy 2) */
+    keep m in the branch list otherwise m should be discarded (strategy 1) */
   for(i=1; i<length; i++) {
     if(branchList[i].mindist <= min_minmaxdist) {
       if(branchList[i].minmaxdist < min_minmaxdist) {
@@ -291,6 +291,22 @@ int DownwardPruning (struct Node node, struct Point poi, struct Rect nearest, st
 
   /* since the branch list is sorted by minimal distance, we use last to keep track of the satisfied
     mbr, once the mbr should be discared, we don't have to consider the mbrs behind it. */
+  return last;
+}
+
+int DownwardPruningSecond(struct Node node, int leafCount, struct Point poi, struct Rect nearest, struct Node* branchlist, int length){
+  /* prune the branchlist by the second rule
+  return: the number of available branches left */  
+  int i;
+  int last = length;
+  if (leafCount>0){// if the node is a leaf node, do the second prunning
+    for (i = 0; i < length; ++i){
+      if (objectDist(poi, branchlist[i].minX, branchlist[i].maxY)>minMaxDist(node, poi)){
+        last = i;
+        break;
+      }
+    }
+  }
   return last;
 }
 
@@ -384,7 +400,16 @@ void nearestNeighborSearch(sqlite3 *db, struct Node node, struct Point poi, stru
     //printf("sorted ABL based on mindist\n");
 
     //Perform Downward Pruning 
-    last = DownwardPruning(node, poi, *nearest, branchList, length); //this will require dynamically change the branchlist how??????????????
+    last = DownwardPruning(node, poi, *nearest, branchList, length); 
+
+    /* we implemented this pruning strategy 2 in this function, 
+      though it is not necessary to have this function, 
+      because the node here is always a non-leaf node, 
+      there is no need for pruning the objects inside of which. 
+      The following function would check if the node is a leaf node, 
+        if it is, perform the pruning strategy 2 on it*/
+    //last = DownwardPruningSecond(node, numLeaves, poi, *nearest, branchList, length); 
+    
     //printf("down pruned, now has %d possible branches\n", last);
 
     for (j = 0; j < last; ++j)

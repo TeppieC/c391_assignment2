@@ -323,6 +323,22 @@ int DownwardPruning (struct Node node, struct Point poi, struct Rect* nearests, 
   return last;
 }
 
+int DownwardPruningSecond(struct Node node, int leafCount, struct Point poi, struct Rect* nearest, struct Node* branchlist, int length){
+  /* prune the branchlist by the second rule
+  return: the number of available branches left */  
+  int i;
+  int last = length;
+  if (leafCount>0){// if the node is a leaf node, do the second prunning
+    for (i = 0; i < length; ++i){
+      if (objectDist(poi, branchlist[i].minX, branchlist[i].maxY)>minMaxDist(node, poi)){
+        last = i;
+        break;
+      }
+    }
+  }
+  return last;
+}
+
 //implemnent upward puring
 int UpwardPruning (struct Node node, struct Point poi, struct Rect* nearests, int k, struct Node* branchList, int length) {
   /* prune the branchlist by the third rule

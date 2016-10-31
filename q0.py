@@ -1,5 +1,8 @@
 '''
 Author: Zhaorui Chen (Oct 6th 2016)
+
+Run with:
+	python q0.py
 '''
 
 
