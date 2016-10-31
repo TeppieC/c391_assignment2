@@ -5,7 +5,7 @@
 #include <math.h> // since we include math.h to implement sqrt(), please make sure to include -lm when compile
 
 /***
-  gcc -g q8.c sqlite3.c -lpthread -ldl -DSQLITE_ENABLE_RTREE=1 -lm
+  gcc -g q8.c sqlite3.c -lpthread -ldl -lm -DSQLITE_ENABLE_RTREE=1 
 ***/
 
 //http://stackoverflow.com/questions/3437404/min-and-max-in-c
